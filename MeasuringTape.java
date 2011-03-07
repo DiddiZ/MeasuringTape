@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2010-12-17
+//Date: 2010-12-19
 
 import java.io.File;
 import java.io.FileWriter;
@@ -15,7 +15,7 @@ public class MeasuringTape extends Plugin
     private Listener listener = new Listener();
     //private Logger log;
     private String name = "MeasuringTape";
-    private String version = "0.4";
+    private String version = "0.4b";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
     private Integer blocksPerString;
@@ -266,7 +266,7 @@ public class MeasuringTape extends Plugin
 						if (stringsNeeded <= stringsAvailable)
 							session.user.sendMessage("Distance: " + distance + "m");
 						else
-							session.user.sendMessage("§aYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+							session.user.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					}
 					break;
 				case 1:
@@ -282,7 +282,7 @@ public class MeasuringTape extends Plugin
 						if (stringsNeeded <= stringsAvailable)
 							session.user.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
 						else
-							session.user.sendMessage("§aYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+							session.user.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					}
 					break;
 				case 2:
@@ -297,7 +297,7 @@ public class MeasuringTape extends Plugin
 						if (stringsNeeded <= stringsAvailable)
 							session.user.sendMessage("Area: " + x + "x" + z);
 						else
-							session.user.sendMessage("§aYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+							session.user.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					}
 					break;
 			}
@@ -331,6 +331,16 @@ public class MeasuringTape extends Plugin
 					found += invent.getItemFromSlot(i).getAmount();
 			}
 		}
+		invent = player.getCraftingTable();
+		for (int i = 0; i <= 3; i++)
+		{
+			if (invent.getItemFromSlot(i) != null)
+			{
+				if (invent.getItemFromSlot(i).getItemId() == itemId)
+					found += invent.getItemFromSlot(i).getAmount();
+			}
+		}
 		return found;
 	}
 }
+
