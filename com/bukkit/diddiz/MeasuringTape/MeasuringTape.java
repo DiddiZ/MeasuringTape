@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2011-01-23
+//Date: 2011-01-28
 package com.bukkit.diddiz.MeasuringTape;
 
 import java.io.File;
@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.bukkit.Location;
 import org.bukkit.Server;
 import org.bukkit.block.Block;
@@ -25,15 +26,18 @@ import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.nijikokun.bukkit.Permissions.Permissions;
+
 public class MeasuringTape extends JavaPlugin
 {
 	static Logger logger = Logger.getLogger("Minecraft");
 	private MeasuringTapePlayerListener measuringTapePlayerListener = new MeasuringTapePlayerListener();
     private MeasuringTapeBlockListener measuringTapeBlockListener = new MeasuringTapeBlockListener();
     private ArrayList<Session> sessions = new ArrayList<Session>();
-    private Integer tapeDelay;
-    private Integer blocksPerString;
-    private Boolean defaultEnabled;
+    private int tapeDelay;
+    private int blocksPerString;
+    private boolean defaultEnabled;
+    private boolean usePermissions = false;
 
 	public MeasuringTape(PluginLoader pluginLoader, Server instance, PluginDescriptionFile desc, File folder, File plugin, ClassLoader cLoader)
     {
@@ -55,32 +59,6 @@ public class MeasuringTape extends JavaPlugin
 	public void onDisable()
 	{
 		logger.info("MeasuringTape disabled");
-	}
-    
-    private void LoadProperties()
-    {
-		try
-		{
-			File file = new File (getDataFolder(), "config.yml");
-			if (!file.exists())
-			{
-				file.getParentFile().mkdirs();
-				FileWriter writer = new FileWriter(file);
-				writer.write("tapeDelay : 15" + System.getProperty("line.separator"));
-				writer.write("blocksPerString : -1" + System.getProperty("line.separator"));
-				writer.write("defaultEnabled : true");
-				writer.close();
-				logger.info("ClayReg config created");
-			}
-			getConfiguration().load();
-			tapeDelay = getConfiguration().getInt("tapeDelay", 15);
-			blocksPerString = getConfiguration().getInt("blocksPerString", -1);
-			defaultEnabled = getConfiguration().getBoolean("defaultEnabled", true);
-        }
-		catch (Exception e)
-		{
-        	logger.log(Level.SEVERE, "Exception while reading from measuringTape.properties", e);
-		}
 	}
     
     private class Session
@@ -134,14 +112,14 @@ public class MeasuringTape extends JavaPlugin
 	{ 
 		public void onPlayerCommand(PlayerChatEvent event)
 		{
-			if (event.getMessage().substring(0, 3).equalsIgnoreCase("/mt"))
+			if (event.getMessage().substring(0, 3).equalsIgnoreCase("/mt") && CheckPermission(event.getPlayer(), "measuringtape.measure"))
 			{
 				String[] split = event.getMessage().split(" ");
 				Player player = event.getPlayer();
 				Session session = GetSession(player);
 				if (split.length == 1)
 					player.sendMessage("§cNo argument. Type /mt help for help");
-				else if (split[1].equalsIgnoreCase("tape"))
+				else if (split[1].equalsIgnoreCase("tape") && CheckPermission(event.getPlayer(), "measuringtape.tape"))
 				{
 					if (CountItem(player.getInventory(), 287) > 0)
 					{
@@ -212,7 +190,7 @@ public class MeasuringTape extends JavaPlugin
 					else
 						player.sendMessage("§cWrong argument. Type /mt for help");
 				}
-				else if (split[1].equalsIgnoreCase("tp") && player.isOp())
+				else if (split[1].equalsIgnoreCase("tp") && CheckPermission(event.getPlayer(), "measuringtape.tp"))
 				{
 					if (session.mode == 2)
 					{
@@ -221,7 +199,9 @@ public class MeasuringTape extends JavaPlugin
 							Position diff = GetDifference(session.pos.get(0), session.pos.get(1));
 							if ((diff.X) % 2 == 0 && (diff.Z) % 2 == 0)
 							{
-								player.teleportTo(new Location(getServer().getWorlds()[0], session.pos.get(0).X + diff.X / 2 + 0.5 , Math.max(session.pos.get(0).Y, session.pos.get(1).Y) + 1, session.pos.get(0).Z + (diff.Z) / 2 + 0.5, player.getLocation().getYaw(), player.getLocation().getPitch()));
+								double x = session.pos.get(0).X + diff.X / 2 + 0.5;
+								double z = session.pos.get(0).Z + (diff.Z) / 2 + 0.5;
+								player.teleportTo(new Location(getServer().getWorlds()[0], x , getServer().getWorlds()[0].getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
 								player.sendMessage("§aTeleported to center");
 							}
 							else 
@@ -236,12 +216,13 @@ public class MeasuringTape extends JavaPlugin
 				else if (split[1].equalsIgnoreCase("help"))
 					{
 						player.sendMessage("§dMeasuringTape Commands:");
-						player.sendMessage("§d/mt tape //Gives a measuring tape to the player");
+						if (CheckPermission(event.getPlayer(), "measuringtape.tape"))
+							player.sendMessage("§d/mt tape //Gives a measuring tape to the player");
 						player.sendMessage("§d/mt read //Displays the distance again");
 						player.sendMessage("§d/mt unset //Unsets both markers");
 						player.sendMessage("§d/mt mode [mode] //Toggles measuring mode");
 						player.sendMessage("§d/mt modehelp //Displays help to the modes");
-						if (player.isOp())
+						if (CheckPermission(event.getPlayer(), "measuringtape.tp"))
 							player.sendMessage("§d/mt tp //Teleports to the center of the selected area");
 						if (session.MTEnabled)
 							player.sendMessage("§d/mt disable //Disables string attaching");
@@ -278,7 +259,7 @@ public class MeasuringTape extends JavaPlugin
 	{ 
 		public void onBlockDamage(BlockDamageEvent event) 
 		{
-			if (!event.isCancelled() && event.getPlayer().getItemInHand().getTypeId() == 287 && event.getDamageLevel().getLevel() == 0)
+			if (event.getPlayer().getItemInHand().getTypeId() == 287 && event.getDamageLevel().getLevel() == 0 && CheckPermission(event.getPlayer(), "measuringtape.measure"))
 			{
 				Block block = event.getBlock();
 				Player player = event.getPlayer();
@@ -305,7 +286,7 @@ public class MeasuringTape extends JavaPlugin
 		
 		public void onBlockRightClick(BlockRightClickEvent event)
 		{
-			if (event.getPlayer().getItemInHand().getTypeId() == 287)
+			if (event.getPlayer().getItemInHand().getTypeId() == 287 && CheckPermission(event.getPlayer(), "measuringtape.measure"))
 			{
 				Block block = event.getBlock();
 				Player player = event.getPlayer();
@@ -330,6 +311,60 @@ public class MeasuringTape extends JavaPlugin
 		}
 	}
 	
+    private void LoadProperties()
+    {
+		try
+		{
+			File file = new File (getDataFolder(), "config.yml");
+			if (!file.exists())
+				WriteDefaultConfig(file);
+			getConfiguration().load();
+			tapeDelay = getConfiguration().getInt("tapeDelay", 15);
+			blocksPerString = getConfiguration().getInt("blocksPerString", -1);
+			defaultEnabled = getConfiguration().getBoolean("defaultEnabled", true);
+			if (getConfiguration().getBoolean("usePermissions", false))
+			{
+				if (getServer().getPluginManager().getPlugin("Permissions") != null)
+					usePermissions = true;
+				else
+					logger.info("[MeasuringTape] Permissions plugin not found. Use default permissions.");
+			}
+        }
+		catch (Exception e)
+		{
+        	logger.log(Level.SEVERE, "Exception while reading config.yml", e);
+		}
+	}
+    
+    private void WriteDefaultConfig(File file) throws Exception
+    {
+		file.getParentFile().mkdirs();
+		FileWriter writer = new FileWriter(file);
+		String crlf = System.getProperty("line.separator");
+		writer.write("tapeDelay : 15" + crlf
+				+ "blocksPerString : -1" + crlf
+				+ "defaultEnabled : true" + crlf
+				+ "usePermissions : false");
+		writer.close();
+		logger.info("[MeasuringTape] Config created");
+    }
+	
+    private boolean CheckPermission(Player player, String permission)
+    {
+    	if (usePermissions)
+    		return Permissions.Security.permission(player, permission);
+    	else
+    	{
+    		if (permission.equals("measuringtape.measure"))
+    			return true;
+    		else if (permission.equals("measuringtape.tape"))
+    			return true;
+    		else if (permission.equals("measuringtape.tp"))
+    			return player.isOp();
+    	}
+    	return false;
+    }
+    
 	private void ShowDistance(Session session)
 	{
 		Player player = getServer().getPlayer(session.user);
