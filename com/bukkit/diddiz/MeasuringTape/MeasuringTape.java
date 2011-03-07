@@ -251,7 +251,7 @@ public class MeasuringTape extends JavaPlugin
 						{
 							double x = session.pos.get(0).X + diff.X / 2 + 0.5;
 							double z = session.pos.get(0).Z + (diff.Z) / 2 + 0.5;
-							player.teleportTo(new Location(getServer().getWorlds()[0], x , getServer().getWorlds()[0].getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
+							player.teleportTo(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
 							player.sendMessage("§aTeleported to center");
 						}
 						else 
