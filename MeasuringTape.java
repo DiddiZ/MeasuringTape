@@ -1,16 +1,23 @@
 //Author: DiddiZ
 //Date: 2010-12-16
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MeasuringTape extends Plugin
 {
+	static Logger minecraftLog = Logger.getLogger("Minecraft");
     private Listener listener = new Listener();
-    private Logger log;
+    //private Logger log;
     private String name = "MeasuringTape";
-    private String version = "0.2";
+    private String version = "0.3";
     private ArrayList<Session> sessions = new ArrayList<Session>();
+    private Integer tapeDelay;
 
     public void enable()
     {
@@ -24,12 +31,51 @@ public class MeasuringTape extends Plugin
 
     public void initialize()
     {
-        log = Logger.getLogger("Minecraft");
-        log.info(name + " v" + version + " loaded");
+    	LoadProperties();
+    	//log = Logger.getLogger("Minecraft");
+    	minecraftLog.info(name + " v" + version + " loaded");
         etc.getLoader().addListener(PluginLoader.Hook.COMMAND, listener, this, PluginListener.Priority.MEDIUM);
         etc.getLoader().addListener(PluginLoader.Hook.BLOCK_RIGHTCLICKED, listener, this, PluginListener.Priority.MEDIUM);
         etc.getLoader().addListener(PluginLoader.Hook.BLOCK_DESTROYED, listener, this, PluginListener.Priority.MEDIUM);
     }
+    
+    private void LoadProperties()
+    {
+		if (!new File("measuringTape.properties").exists())
+		{
+			FileWriter writer = null;
+            try
+            {
+            	writer = new FileWriter("measuringTape.properties");
+            	writer.write("tapeDelay=15\r\n");                    
+            }
+            catch (Exception e)
+            {
+            	minecraftLog.log(Level.SEVERE, "Exception while creating measuringTape.properties", e);
+            }
+            finally
+            {
+                try
+                {
+                    if (writer != null)
+                        writer.close();
+                }
+                catch (IOException e)
+                {
+                	minecraftLog.log(Level.SEVERE, "Exception while closing writer for measuringTape.properties", e);
+                }
+            }
+		}
+		PropertiesFile properties = new PropertiesFile("measuringTape.properties");
+		try
+		{
+			tapeDelay = properties.getInt("tapeDelay");
+        }
+		catch (Exception e)
+		{
+        	minecraftLog.log(Level.SEVERE, "Exception while reading from measuringTape.properties", e);
+		}
+	}
     
     class Session
     {
@@ -39,6 +85,7 @@ public class MeasuringTape extends Plugin
         public Boolean pos1Set = false;
         public Boolean pos2Set = false;
         public Integer mode = 0;
+        public Date lastTape = new Date(0);
         
         public Session (Player player)
         {
@@ -69,7 +116,6 @@ public class MeasuringTape extends Plugin
     		}
 	    	if (session.pos1Set && session.pos2Set)
 		    	ShowDistance(session);
-	    	SetSession(session);
 			return true;
 		}
 		
@@ -90,24 +136,30 @@ public class MeasuringTape extends Plugin
     		}
 	    	if (session.pos1Set && session.pos2Set)
 		    	ShowDistance(session);
-	    	SetSession(session);
 		}
 		
 		public boolean onCommand(Player player, String[] split)
 		{
-			if (!player.canUseCommand("/measuringtape") || !split[0].equalsIgnoreCase("/mt"))
+			if (!split[0].equalsIgnoreCase("/mt"))
+				return false;
+			if (!player.canUseCommand("/measuringtape"))
 				return false;
 			Session session = GetSession(player);
 			if (split.length == 1)
 			{
 				player.sendMessage("§cMeasuringTape Commands:");
-				player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
+				if (player.canUseCommand("/mtcangetstring"))
+					player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
 				player.sendMessage("§c/mt read //Displays the distance again");
 				player.sendMessage("§c/mt unset //Unsets both markers");
-				player.sendMessage("§c/mt mode [distance|vectors|area] //Toggles the measuring mode");
+				player.sendMessage("§c/mt mode [distance|vectors|area] //Toggles measuring mode");
+				if (player.canUseCommand("/mtteleport"))
+					player.sendMessage("§c/mt tp //Teleports to the center of the selected area");
 			}
-			else if (split[1].equalsIgnoreCase("tape"))
+			else if (split[1].equalsIgnoreCase("tape") && player.canUseCommand("/mtcangetstring"))
 			{
+				
+				
 				if (CountItem(player, 287) > 0)
 				{
 					player.sendMessage("§cYou have alredy a string"); 
@@ -115,9 +167,19 @@ public class MeasuringTape extends Plugin
 				}
 				else
 				{
-					player.giveItem(287, 1);
-					player.sendMessage("§aHere is your measuring tape"); 
-					player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
+					long mins = (new Date().getTime() - session.lastTape.getTime()) / 60000;
+					if (mins >= tapeDelay)
+					{
+						player.giveItem(287, 1);
+						session.lastTape = new Date();
+						player.sendMessage("§aHere is your measuring tape"); 
+						player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
+					}
+					else
+					{
+						player.sendMessage("Yot got your last tape " + mins + "min ago.");
+						player.sendMessage("You have to wait " + (tapeDelay - mins) + " minutes");
+					}
 				}
 			}
 			else if (split[1].equalsIgnoreCase("read"))
@@ -155,6 +217,27 @@ public class MeasuringTape extends Plugin
 				}
 				else
 					player.sendMessage("§cWrong argument. Type /mt for help");
+			}
+			else if (split[1].equalsIgnoreCase("tp") && player.canUseCommand("/mtteleport"))
+			{
+				if (session.mode == 2)
+				{
+					if (session.pos1Set && session.pos1Set)
+					{
+						if ((session.pos2.x - session.pos1.x) % 2 == 0 && (session.pos2.z - session.pos1.z) % 2 == 0)
+						{
+							player.teleportTo(session.pos1.x + (session.pos2.x - session.pos1.x) / 2 + 0.5 , Math.max(session.pos1.y, session.pos2.y)+ 1, session.pos1.z + (session.pos2.z - session.pos1.z) / 2 + 0.5, player.getRotation(), player.getPitch());
+							player.sendMessage("§aTeleported to center");
+						}
+						else 
+							player.sendMessage("§cArea has not a single block as center");
+					}
+					else
+						player.sendMessage("§cBoth positions must be set");
+				}
+				else 
+					player.sendMessage("§cOnly available in area mode");
+				
 			}
 			else
 				player.sendMessage("§cWrong argument. Type /mt for help");
@@ -194,19 +277,6 @@ public class MeasuringTape extends Plugin
 		}
 		sessions.add(new Session(player));
 		return GetSession(player);
-	}
-	
-	private void SetSession(Session session)
-	{
-		for (Integer i = 0; i < sessions.size(); i++)
-		{
-			if (sessions.get(i).user.getName().equals(session.user.getName()))
-			{
-				sessions.set(i, session);
-				return;
-			}
-		}
-		
 	}
 	
 	private Integer CountItem(Player player, Integer itemId)
