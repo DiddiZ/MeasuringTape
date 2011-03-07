@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2010-12-31
+//Date: 2011-01-12
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -11,10 +11,11 @@ public class MeasuringTape extends Plugin
 	static Logger minecraftLog = Logger.getLogger("Minecraft");
     private Listener listener = new Listener();
     private String name = "MeasuringTape";
-    private String version = "0.5c";
+    private String version = "0.5d";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
     private Integer blocksPerString;
+    private Boolean defaultEnabled;
 
     public void enable()
     {
@@ -42,6 +43,7 @@ public class MeasuringTape extends Plugin
 		{
 			tapeDelay = properties.getInt("tapeDelay", 15);
 			blocksPerString = properties.getInt("blocksPerString", -1);
+			defaultEnabled = properties.getBoolean("defaultEnabled", true);
         }
 		catch (Exception e)
 		{
@@ -52,6 +54,7 @@ public class MeasuringTape extends Plugin
     private class Session
     {
     	public String user;
+    	public Boolean MTEnabled = defaultEnabled;
     	public ArrayList<Position> pos = new ArrayList<Position>();
         public Boolean pos1Set = false;
         public Boolean pos2Set = false;
@@ -105,20 +108,23 @@ public class MeasuringTape extends Plugin
 			if (block.getStatus() == 0 && player.getItemInHand() == 287 && player.canUseCommand("/mt"))
 			{
 				Session session = GetSession(player);
-				if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
-					AttachToFirst(session, new Position(block), player);
-				if (session.mode == 4)
+				if (session.MTEnabled)
 				{
-		    		if (!session.pos1Set)
-		    			AttachToFirst(session, new Position(block), player);
-		    		else if (!session.pos2Set)
-		    			AttachToSecond(session, new Position(block), player);
-		    		else
-		    			session.pos.add(new Position(block));
+					if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
+						AttachToFirst(session, new Position(block), player);
+					if (session.mode == 4)
+					{
+			    		if (!session.pos1Set)
+			    			AttachToFirst(session, new Position(block), player);
+			    		else if (!session.pos2Set)
+			    			AttachToSecond(session, new Position(block), player);
+			    		else
+			    			session.pos.add(new Position(block));
+					}
+			    	if (session.pos1Set && session.pos2Set)
+				    	ShowDistance(session);
+					return true;
 				}
-		    	if (session.pos1Set && session.pos2Set)
-			    	ShowDistance(session);
-				return true;
 			}
 			return false;
 		}
@@ -128,21 +134,23 @@ public class MeasuringTape extends Plugin
 			if (item.getItemId() == 287 && player.canUseCommand("/mt"))
 			{
 				Session session = GetSession(player);
-				if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
-					AttachToSecond(session, new Position(blockClicked), player);
-				if (session.mode == 4)
+				if (session.MTEnabled)
 				{
-		    		if (!session.pos1Set)
-		    			AttachToFirst(session, new Position(blockClicked), player);
-		    		else if (!session.pos2Set)
-		    			AttachToSecond(session, new Position(blockClicked), player);
-		    		else
-		    			session.pos.add(new Position(blockClicked));
+					if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
+						AttachToSecond(session, new Position(blockClicked), player);
+					if (session.mode == 4)
+					{
+			    		if (!session.pos1Set)
+			    			AttachToFirst(session, new Position(blockClicked), player);
+			    		else if (!session.pos2Set)
+			    			AttachToSecond(session, new Position(blockClicked), player);
+			    		else
+			    			session.pos.add(new Position(blockClicked));
+					}
+			    	if (session.pos1Set && session.pos2Set)
+				    	ShowDistance(session);
 				}
-		    	if (session.pos1Set && session.pos2Set)
-			    	ShowDistance(session);
 			}
-			return;
 		}
 		
 		public boolean onCommand(Player player, String[] split)
@@ -245,24 +253,38 @@ public class MeasuringTape extends Plugin
 				}
 				else if (split[1].equalsIgnoreCase("help"))
 					{
-						player.sendMessage("§cMeasuringTape Commands:");
+						player.sendMessage("§dMeasuringTape Commands:");
 						if (player.canUseCommand("/mtcangetstring"))
-							player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
-						player.sendMessage("§c/mt read //Displays the distance again");
-						player.sendMessage("§c/mt unset //Unsets both markers");
-						player.sendMessage("§c/mt mode [mode] //Toggles measuring mode");
-						player.sendMessage("§c/mt modehelp //Displays help to the modes");
+							player.sendMessage("§d/mt tape //Gives a measuring tape to the player");
+						player.sendMessage("§d/mt read //Displays the distance again");
+						player.sendMessage("§d/mt unset //Unsets both markers");
+						player.sendMessage("§d/mt mode [mode] //Toggles measuring mode");
+						player.sendMessage("§d/mt modehelp //Displays help to the modes");
 						if (player.canUseCommand("/mtteleport"))
-							player.sendMessage("§c/mt tp //Teleports to the center of the selected area");
+							player.sendMessage("§d/mt tp //Teleports to the center of the selected area");
+						if (session.MTEnabled)
+							player.sendMessage("§d/mt disable //Disables string attaching");
+						else
+							player.sendMessage("§d/mt enable //Enables string attaching");
 					}
 				else if (split[1].equalsIgnoreCase("modehelp"))
 				{
-					player.sendMessage("§cMeasuringTape Modes:");
-					player.sendMessage("§cdistance - direct distance between both positions");
-					player.sendMessage("§cvectors -xyz-vectors between the positions");
-					player.sendMessage("§carea - area between the points");
-					player.sendMessage("§cblocks - amount of blocks in x, y and z axis between positions");
-					player.sendMessage("§ctrack - distance with multiple points");
+					player.sendMessage("§dMeasuringTape Modes:");
+					player.sendMessage("§ddistance - direct distance between both positions");
+					player.sendMessage("§dvectors -xyz-vectors between the positions");
+					player.sendMessage("§darea - area between the points");
+					player.sendMessage("§dblocks - amount of blocks in x, y and z axis between positions");
+					player.sendMessage("§dtrack - distance with multiple points");
+				}
+				else if (split[1].equalsIgnoreCase("enable"))
+				{
+					session.MTEnabled = true;
+					player.sendMessage("§dMeasuring tape enabled");
+				}
+				else if (split[1].equalsIgnoreCase("disable"))
+				{
+					session.MTEnabled = false;
+					player.sendMessage("§dMeasuring tape disabled");
 				}
 				else
 					player.sendMessage("§cWrong argument. Type /mt help for help");
