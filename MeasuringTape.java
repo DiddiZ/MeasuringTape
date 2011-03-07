@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2010-12-16
+//Date: 2010-12-17
 
 import java.io.File;
 import java.io.FileWriter;
@@ -15,9 +15,10 @@ public class MeasuringTape extends Plugin
     private Listener listener = new Listener();
     //private Logger log;
     private String name = "MeasuringTape";
-    private String version = "0.3";
+    private String version = "0.4";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
+    private Integer blocksPerString;
 
     public void enable()
     {
@@ -47,7 +48,10 @@ public class MeasuringTape extends Plugin
             try
             {
             	writer = new FileWriter("measuringTape.properties");
-            	writer.write("tapeDelay=15\r\n");                    
+            	writer.write("#Defines how long it will take to get another string. Use 0 or -1 to disable");
+            	writer.write("tapeDelay=15\r\n");
+            	writer.write("#Defines how far you can measure with one string. You will have to have more in your inventory if you want to measure longer distances. Use -1 to disable");
+            	writer.write("blocksPerString=-1\r\n");
             }
             catch (Exception e)
             {
@@ -69,7 +73,8 @@ public class MeasuringTape extends Plugin
 		PropertiesFile properties = new PropertiesFile("measuringTape.properties");
 		try
 		{
-			tapeDelay = properties.getInt("tapeDelay");
+			tapeDelay = properties.getInt("tapeDelay", 15);
+			blocksPerString = properties.getInt("blocksPerString", -1);
         }
 		catch (Exception e)
 		{
@@ -158,8 +163,6 @@ public class MeasuringTape extends Plugin
 			}
 			else if (split[1].equalsIgnoreCase("tape") && player.canUseCommand("/mtcangetstring"))
 			{
-				
-				
 				if (CountItem(player, 287) > 0)
 				{
 					player.sendMessage("§cYou have alredy a string"); 
@@ -249,17 +252,54 @@ public class MeasuringTape extends Plugin
 	{
 		if (session.pos1Set && session.pos2Set)
 		{
+			int x; int y; int z;
 			switch(session.mode)
 			{
-			case 0:
-				session.user.sendMessage("Distance: " + (double)Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / 10 + "m");
-				break;
-			case 1:
-	    		session.user.sendMessage("Vectors: X" + (int)Math.abs(session.pos2.x - session.pos1.x)  + " Y" + (int)Math.abs(session.pos2.z - session.pos1.z) + " Z" + (int)Math.abs(session.pos2.y - session.pos1.y));
-	    		break;
-			case 2: 
-				session.user.sendMessage("Area: " + (int)(Math.abs(session.pos2.x - session.pos1.x) + 1) + "x" + "" + (int)(Math.abs(session.pos2.z - session.pos1.z) + 1));
-				break;
+				case 0:
+					double distance = Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / (double)10;
+					if (blocksPerString == -1)
+						session.user.sendMessage("Distance: " + distance + "m");
+					else
+					{
+						int stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+						int stringsAvailable = CountItem(session.user, 287);
+						if (stringsNeeded <= stringsAvailable)
+							session.user.sendMessage("Distance: " + distance + "m");
+						else
+							session.user.sendMessage("§aYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+					}
+					break;
+				case 1:
+					x = (int)Math.abs(session.pos2.x - session.pos1.x);
+					y = (int)Math.abs(session.pos2.y - session.pos1.y);
+					z = (int)Math.abs(session.pos2.z - session.pos1.z);
+					if (blocksPerString == -1)
+						session.user.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
+					else
+					{
+						int stringsNeeded = x + y + z;
+						int stringsAvailable = CountItem(session.user, 287);
+						if (stringsNeeded <= stringsAvailable)
+							session.user.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
+						else
+							session.user.sendMessage("§aYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+					}
+					break;
+				case 2:
+					x = (int)(Math.abs(session.pos2.x - session.pos1.x) + 1);
+					z = (int)(Math.abs(session.pos2.z - session.pos1.z) + 1);
+					if (blocksPerString == -1)
+						session.user.sendMessage("Area: " + x + "x" + z);
+					else
+					{
+						int stringsNeeded = x + z;
+						int stringsAvailable = CountItem(session.user, 287);
+						if (stringsNeeded <= stringsAvailable)
+							session.user.sendMessage("Area: " + x + "x" + z);
+						else
+							session.user.sendMessage("§aYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+					}
+					break;
 			}
 		}
 		else
@@ -281,16 +321,16 @@ public class MeasuringTape extends Plugin
 	
 	private Integer CountItem(Player player, Integer itemId)
 	{
-		Integer found = 0;
+		int found = 0;
 		Inventory invent = player.getInventory();
-		for (Integer i = 0; i <= 35; i++)
+		for (int i = 0; i <= 35; i++)
 		{
 			if (invent.getItemFromSlot(i) != null)
 			{
 				if (invent.getItemFromSlot(i).getItemId() == itemId)
 					found += invent.getItemFromSlot(i).getAmount();
 			}
-		}		
+		}
 		return found;
 	}
 }
