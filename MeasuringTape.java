@@ -1,9 +1,6 @@
 //Author: DiddiZ
-//Date: 2010-12-27
+//Date: 2010-12-30
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.logging.Level;
@@ -14,24 +11,24 @@ public class MeasuringTape extends Plugin
 	static Logger minecraftLog = Logger.getLogger("Minecraft");
     private Listener listener = new Listener();
     private String name = "MeasuringTape";
-    private String version = "0.5";
+    private String version = "0.5b";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
     private Integer blocksPerString;
 
     public void enable()
     {
-    	
+    	LoadProperties();
+    	etc.getInstance().addCommand("/mt", " - Measuring tape. Type /mt help for help");
     }
     
     public void disable()
     {
-    	
+    	etc.getInstance().removeCommand("/mt");
     }
 
     public void initialize()
     {
-    	LoadProperties();
     	minecraftLog.info(name + " v" + version + " loaded");
         etc.getLoader().addListener(PluginLoader.Hook.COMMAND, listener, this, PluginListener.Priority.MEDIUM);
         etc.getLoader().addListener(PluginLoader.Hook.BLOCK_RIGHTCLICKED, listener, this, PluginListener.Priority.MEDIUM);
@@ -40,35 +37,7 @@ public class MeasuringTape extends Plugin
     
     private void LoadProperties()
     {
-		if (!new File("measuringTape.properties").exists())
-		{
-			FileWriter writer = null;
-            try
-            {
-            	writer = new FileWriter("measuringTape.properties");
-            	writer.write("#Defines how long it will take to get another string. Use 0 or -1 to disable");
-            	writer.write("tapeDelay=15\r\n");
-            	writer.write("#Defines how far you can measure with one string. You will have to have more in your inventory if you want to measure longer distances. Use -1 to disable");
-            	writer.write("blocksPerString=-1\r\n");
-            }
-            catch (Exception e)
-            {
-            	minecraftLog.log(Level.SEVERE, "Exception while creating measuringTape.properties", e);
-            }
-            finally
-            {
-                try
-                {
-                    if (writer != null)
-                        writer.close();
-                }
-                catch (IOException e)
-                {
-                	minecraftLog.log(Level.SEVERE, "Exception while closing writer for measuringTape.properties", e);
-                }
-            }
-		}
-		PropertiesFile properties = new PropertiesFile("measuringTape.properties");
+    	PropertiesFile properties = new PropertiesFile("measuringTape.properties");
 		try
 		{
 			tapeDelay = properties.getInt("tapeDelay", 15);
@@ -187,14 +156,7 @@ public class MeasuringTape extends Plugin
 			Session session = GetSession(player);
 			if (split.length == 1)
 			{
-				player.sendMessage("§cMeasuringTape Commands:");
-				if (player.canUseCommand("/mtcangetstring"))
-					player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
-				player.sendMessage("§c/mt read //Displays the distance again");
-				player.sendMessage("§c/mt unset //Unsets both markers");
-				player.sendMessage("§c/mt mode [distance|vectors|area] //Toggles measuring mode");
-				if (player.canUseCommand("/mtteleport"))
-					player.sendMessage("§c/mt tp //Teleports to the center of the selected area");
+				player.sendMessage("§cNo argument. Type /mt help for help");
 			}
 			else if (split[1].equalsIgnoreCase("tape") && player.canUseCommand("/mtcangetstring"))
 			{
@@ -284,10 +246,30 @@ public class MeasuringTape extends Plugin
 				}
 				else 
 					player.sendMessage("§cOnly available in area mode");
-				
+			}
+			else if (split[1].equalsIgnoreCase("help"))
+				{
+					player.sendMessage("§cMeasuringTape Commands:");
+					if (player.canUseCommand("/mtcangetstring"))
+						player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
+					player.sendMessage("§c/mt read //Displays the distance again");
+					player.sendMessage("§c/mt unset //Unsets both markers");
+					player.sendMessage("§c/mt mode [mode] //Toggles measuring mode");
+					player.sendMessage("§c/mt modehelp //Displays help to the modes");
+					if (player.canUseCommand("/mtteleport"))
+						player.sendMessage("§c/mt tp //Teleports to the center of the selected area");
+				}
+			else if (split[1].equalsIgnoreCase("modehelp"))
+			{
+				player.sendMessage("§cMeasuringTape Modes:");
+				player.sendMessage("§cdistance - direct distance between both positions");
+				player.sendMessage("§cvectors -xyz-vectors between the positions");
+				player.sendMessage("§carea - area between the points");
+				player.sendMessage("§cblocks - amount of blocks in x, y and z axis between positions");
+				player.sendMessage("§ctrack - distance with multiple points");
 			}
 			else
-				player.sendMessage("§cWrong argument. Type /mt for help");
+				player.sendMessage("§cWrong argument. Type /mt help for help");
 			return true;
 		}
 	}
