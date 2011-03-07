@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2010-12-19
+//Date: 2010-12-27
 
 import java.io.File;
 import java.io.FileWriter;
@@ -13,9 +13,8 @@ public class MeasuringTape extends Plugin
 {
 	static Logger minecraftLog = Logger.getLogger("Minecraft");
     private Listener listener = new Listener();
-    //private Logger log;
     private String name = "MeasuringTape";
-    private String version = "0.4b";
+    private String version = "0.4c";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
     private Integer blocksPerString;
@@ -33,7 +32,6 @@ public class MeasuringTape extends Plugin
     public void initialize()
     {
     	LoadProperties();
-    	//log = Logger.getLogger("Minecraft");
     	minecraftLog.info(name + " v" + version + " loaded");
         etc.getLoader().addListener(PluginLoader.Hook.COMMAND, listener, this, PluginListener.Priority.MEDIUM);
         etc.getLoader().addListener(PluginLoader.Hook.BLOCK_RIGHTCLICKED, listener, this, PluginListener.Priority.MEDIUM);
@@ -84,7 +82,7 @@ public class MeasuringTape extends Plugin
     
     class Session
     {
-    	public Player user;
+    	public String user;
         public Location pos1 = new Location();
         public Location pos2 = new Location();
         public Boolean pos1Set = false;
@@ -94,7 +92,7 @@ public class MeasuringTape extends Plugin
         
         public Session (Player player)
         {
-        	this.user = player;
+        	this.user = player.getName();
         }
     }
 
@@ -163,7 +161,7 @@ public class MeasuringTape extends Plugin
 			}
 			else if (split[1].equalsIgnoreCase("tape") && player.canUseCommand("/mtcangetstring"))
 			{
-				if (CountItem(player, 287) > 0)
+				if (CountItem(player.getInventory(), 287) > 0)
 				{
 					player.sendMessage("§cYou have alredy a string"); 
 					player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
@@ -250,23 +248,25 @@ public class MeasuringTape extends Plugin
 	
 	private void ShowDistance(Session session)
 	{
+		Player player = etc.getServer().getPlayer(session.user);
 		if (session.pos1Set && session.pos2Set)
 		{
-			int x; int y; int z;
+			int x; int y; int z; double distance;
+			int stringsAvailable = CountItem(player.getInventory(), 287);
+			int stringsNeeded;
 			switch(session.mode)
 			{
 				case 0:
-					double distance = Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / (double)10;
+					distance = Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / (double)10;
 					if (blocksPerString == -1)
-						session.user.sendMessage("Distance: " + distance + "m");
+						player.sendMessage("Distance: " + distance + "m");
 					else
 					{
-						int stringsNeeded = (int)Math.ceil(distance / blocksPerString);
-						int stringsAvailable = CountItem(session.user, 287);
+						stringsNeeded = (int)Math.ceil(distance / blocksPerString);
 						if (stringsNeeded <= stringsAvailable)
-							session.user.sendMessage("Distance: " + distance + "m");
+							player.sendMessage("Distance: " + distance + "m");
 						else
-							session.user.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+							player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					}
 					break;
 				case 1:
@@ -274,37 +274,35 @@ public class MeasuringTape extends Plugin
 					y = (int)Math.abs(session.pos2.y - session.pos1.y);
 					z = (int)Math.abs(session.pos2.z - session.pos1.z);
 					if (blocksPerString == -1)
-						session.user.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
+						player.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
 					else
 					{
-						int stringsNeeded = x + y + z;
-						int stringsAvailable = CountItem(session.user, 287);
+						stringsNeeded = x + y + z;
 						if (stringsNeeded <= stringsAvailable)
-							session.user.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
+							player.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
 						else
-							session.user.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+							player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					}
 					break;
 				case 2:
 					x = (int)(Math.abs(session.pos2.x - session.pos1.x) + 1);
 					z = (int)(Math.abs(session.pos2.z - session.pos1.z) + 1);
 					if (blocksPerString == -1)
-						session.user.sendMessage("Area: " + x + "x" + z);
+						player.sendMessage("Area: " + x + "x" + z);
 					else
 					{
-						int stringsNeeded = x + z;
-						int stringsAvailable = CountItem(session.user, 287);
+						stringsNeeded = x + z;
 						if (stringsNeeded <= stringsAvailable)
-							session.user.sendMessage("Area: " + x + "x" + z);
+							player.sendMessage("Area: " + x + "x" + z);
 						else
-							session.user.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+							player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					}
 					break;
 			}
 		}
 		else
 		{
-			session.user.sendMessage("§aBoth positions must be set");
+			player.sendMessage("§aBoth positions must be set");
 		}
 	}
 	
@@ -312,27 +310,17 @@ public class MeasuringTape extends Plugin
 	{
 		for (Integer i = 0; i < sessions.size(); i++)
 		{
-			if (sessions.get(i).user.getName().equals(player.getName()))
+			if (sessions.get(i).user.equals(player.getName()))
 				return sessions.get(i);
 		}
 		sessions.add(new Session(player));
 		return GetSession(player);
 	}
 	
-	private Integer CountItem(Player player, Integer itemId)
+	private Integer CountItem(Inventory invent, Integer itemId)
 	{
 		int found = 0;
-		Inventory invent = player.getInventory();
 		for (int i = 0; i <= 35; i++)
-		{
-			if (invent.getItemFromSlot(i) != null)
-			{
-				if (invent.getItemFromSlot(i).getItemId() == itemId)
-					found += invent.getItemFromSlot(i).getAmount();
-			}
-		}
-		invent = player.getCraftingTable();
-		for (int i = 0; i <= 3; i++)
 		{
 			if (invent.getItemFromSlot(i) != null)
 			{
