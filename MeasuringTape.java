@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2010-12-30
+//Date: 2010-12-31
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -11,7 +11,7 @@ public class MeasuringTape extends Plugin
 	static Logger minecraftLog = Logger.getLogger("Minecraft");
     private Listener listener = new Listener();
     private String name = "MeasuringTape";
-    private String version = "0.5b";
+    private String version = "0.5c";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
     private Integer blocksPerString;
@@ -102,175 +102,173 @@ public class MeasuringTape extends Plugin
 	{ 
 		public boolean onBlockDestroy(Player player, Block block) 
 		{
-			if (player.getItemInHand() != 287)
-				return false;
-			if (!player.canUseCommand("/measuringtape"))
-				return false;
-			if (block.getStatus() != 0)
-				return false;
-			Session session = GetSession(player);
-			if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
-				AttachToFirst(session, new Position(block), player);
-			if (session.mode == 4)
+			if (block.getStatus() == 0 && player.getItemInHand() == 287 && player.canUseCommand("/mt"))
 			{
-	    		if (!session.pos1Set)
-	    			AttachToFirst(session, new Position(block), player);
-	    		else if (!session.pos2Set)
-	    			AttachToSecond(session, new Position(block), player);
-	    		else
-	    			session.pos.add(new Position(block));
+				Session session = GetSession(player);
+				if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
+					AttachToFirst(session, new Position(block), player);
+				if (session.mode == 4)
+				{
+		    		if (!session.pos1Set)
+		    			AttachToFirst(session, new Position(block), player);
+		    		else if (!session.pos2Set)
+		    			AttachToSecond(session, new Position(block), player);
+		    		else
+		    			session.pos.add(new Position(block));
+				}
+		    	if (session.pos1Set && session.pos2Set)
+			    	ShowDistance(session);
+				return true;
 			}
-	    	if (session.pos1Set && session.pos2Set)
-		    	ShowDistance(session);
-			return true;
+			return false;
 		}
 		
 		public void onBlockRightClicked (Player player, Block blockClicked, Item item)
 		{
-			if (item.getItemId() != 287)
-				return;
-			if (!player.canUseCommand("/measuringtape"))
-				return;
-	    	Session session = GetSession(player);
-			if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
-				AttachToSecond(session, new Position(blockClicked), player);
-			if (session.mode == 4)
+			if (item.getItemId() == 287 && player.canUseCommand("/mt"))
 			{
-	    		if (!session.pos1Set)
-	    			AttachToFirst(session, new Position(blockClicked), player);
-	    		else if (!session.pos2Set)
-	    			AttachToSecond(session, new Position(blockClicked), player);
-	    		else
-	    			session.pos.add(new Position(blockClicked));
+				Session session = GetSession(player);
+				if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
+					AttachToSecond(session, new Position(blockClicked), player);
+				if (session.mode == 4)
+				{
+		    		if (!session.pos1Set)
+		    			AttachToFirst(session, new Position(blockClicked), player);
+		    		else if (!session.pos2Set)
+		    			AttachToSecond(session, new Position(blockClicked), player);
+		    		else
+		    			session.pos.add(new Position(blockClicked));
+				}
+		    	if (session.pos1Set && session.pos2Set)
+			    	ShowDistance(session);
 			}
-	    	if (session.pos1Set && session.pos2Set)
-		    	ShowDistance(session);
+			return;
 		}
 		
 		public boolean onCommand(Player player, String[] split)
 		{
-			if (!split[0].equalsIgnoreCase("/mt"))
-				return false;
-			if (!player.canUseCommand("/measuringtape"))
-				return false;
-			Session session = GetSession(player);
-			if (split.length == 1)
+			if (split[0].equalsIgnoreCase("/mt") && player.canUseCommand("/mt"))
 			{
-				player.sendMessage("§cNo argument. Type /mt help for help");
-			}
-			else if (split[1].equalsIgnoreCase("tape") && player.canUseCommand("/mtcangetstring"))
-			{
-				if (CountItem(player.getInventory(), 287) > 0)
+				Session session = GetSession(player);
+				if (split.length == 1)
 				{
-					player.sendMessage("§cYou have alredy a string"); 
-					player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
+					player.sendMessage("§cNo argument. Type /mt help for help");
 				}
-				else
+				else if (split[1].equalsIgnoreCase("tape") && player.canUseCommand("/mtcangetstring"))
 				{
-					long mins = (new Date().getTime() - session.lastTape.getTime()) / 60000;
-					if (mins >= tapeDelay)
+					if (CountItem(player.getInventory(), 287) > 0)
 					{
-						player.giveItem(287, 1);
-						session.lastTape = new Date();
-						player.sendMessage("§aHere is your measuring tape"); 
+						player.sendMessage("§cYou have alredy a string"); 
 						player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
 					}
 					else
 					{
-						player.sendMessage("Yot got your last tape " + mins + "min ago.");
-						player.sendMessage("You have to wait " + (tapeDelay - mins) + " minutes");
+						long mins = (new Date().getTime() - session.lastTape.getTime()) / 60000;
+						if (mins >= tapeDelay)
+						{
+							player.giveItem(287, 1);
+							session.lastTape = new Date();
+							player.sendMessage("§aHere is your measuring tape"); 
+							player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
+						}
+						else
+						{
+							player.sendMessage("Yot got your last tape " + mins + "min ago.");
+							player.sendMessage("You have to wait " + (tapeDelay - mins) + " minutes");
+						}
 					}
 				}
-			}
-			else if (split[1].equalsIgnoreCase("read"))
-			{
-				ShowDistance(session);
-			}
-			else if (split[1].equalsIgnoreCase("unset"))
-			{
-				session.ResetPos();
-				player.sendMessage("§aMeasuring tape rolled up");
-			}
-			else if (split[1].equalsIgnoreCase("mode"))
-			{
-				if (split.length != 3)
+				else if (split[1].equalsIgnoreCase("read"))
 				{
-					player.sendMessage("§cCorrect usage: /mt mode [mode]");
+					ShowDistance(session);
 				}
-				else if (split[2].equalsIgnoreCase("distance"))
+				else if (split[1].equalsIgnoreCase("unset"))
 				{
-					session.mode = 0;
-					player.sendMessage("§aMeasuring mode set to distance");
-				}
-				else if (split[2].equalsIgnoreCase("vectors"))
-				{
-					session.mode = 1;
-					player.sendMessage("§aMeasuring mode set to vectors");
-				}
-				else if (split[2].equalsIgnoreCase("area"))
-				{
-					session.mode = 2;
-					player.sendMessage("§aMeasuring mode set to area");
-				}
-				else if (split[2].equalsIgnoreCase("blocks"))
-				{
-					session.mode = 3;
-					player.sendMessage("§aMeasuring mode set to blocks");
-				}
-				else if (split[2].equalsIgnoreCase("track"))
-				{
-					session.mode = 4;
 					session.ResetPos();
-					player.sendMessage("§aMeasuring mode set to track");
+					player.sendMessage("§aMeasuring tape rolled up");
 				}
-				else
-					player.sendMessage("§cWrong argument. Type /mt for help");
-			}
-			else if (split[1].equalsIgnoreCase("tp") && player.canUseCommand("/mtteleport"))
-			{
-				if (session.mode == 2)
+				else if (split[1].equalsIgnoreCase("mode"))
 				{
-					if (session.pos1Set && session.pos1Set)
+					if (split.length != 3)
 					{
-						Position diff = GetDifference(session.pos.get(0), session.pos.get(1));
-						if ((diff.X) % 2 == 0 && (diff.Z) % 2 == 0)
-						{
-							player.teleportTo(session.pos.get(0).X + diff.X / 2 + 0.5 , Math.max(session.pos.get(0).Y, session.pos.get(1).Y) + 1, session.pos.get(0).Z + (diff.Z) / 2 + 0.5, player.getRotation(), player.getPitch());
-							player.sendMessage("§aTeleported to center");
-						}
-						else 
-							player.sendMessage("§cArea has not a single block as center");
+						player.sendMessage("§cCorrect usage: /mt mode [mode]");
+					}
+					else if (split[2].equalsIgnoreCase("distance"))
+					{
+						session.mode = 0;
+						player.sendMessage("§aMeasuring mode set to distance");
+					}
+					else if (split[2].equalsIgnoreCase("vectors"))
+					{
+						session.mode = 1;
+						player.sendMessage("§aMeasuring mode set to vectors");
+					}
+					else if (split[2].equalsIgnoreCase("area"))
+					{
+						session.mode = 2;
+						player.sendMessage("§aMeasuring mode set to area");
+					}
+					else if (split[2].equalsIgnoreCase("blocks"))
+					{
+						session.mode = 3;
+						player.sendMessage("§aMeasuring mode set to blocks");
+					}
+					else if (split[2].equalsIgnoreCase("track"))
+					{
+						session.mode = 4;
+						session.ResetPos();
+						player.sendMessage("§aMeasuring mode set to track");
 					}
 					else
-						player.sendMessage("§cBoth positions must be set");
+						player.sendMessage("§cWrong argument. Type /mt for help");
 				}
-				else 
-					player.sendMessage("§cOnly available in area mode");
-			}
-			else if (split[1].equalsIgnoreCase("help"))
+				else if (split[1].equalsIgnoreCase("tp") && player.canUseCommand("/mtteleport"))
 				{
-					player.sendMessage("§cMeasuringTape Commands:");
-					if (player.canUseCommand("/mtcangetstring"))
-						player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
-					player.sendMessage("§c/mt read //Displays the distance again");
-					player.sendMessage("§c/mt unset //Unsets both markers");
-					player.sendMessage("§c/mt mode [mode] //Toggles measuring mode");
-					player.sendMessage("§c/mt modehelp //Displays help to the modes");
-					if (player.canUseCommand("/mtteleport"))
-						player.sendMessage("§c/mt tp //Teleports to the center of the selected area");
+					if (session.mode == 2)
+					{
+						if (session.pos1Set && session.pos1Set)
+						{
+							Position diff = GetDifference(session.pos.get(0), session.pos.get(1));
+							if ((diff.X) % 2 == 0 && (diff.Z) % 2 == 0)
+							{
+								player.teleportTo(session.pos.get(0).X + diff.X / 2 + 0.5 , Math.max(session.pos.get(0).Y, session.pos.get(1).Y) + 1, session.pos.get(0).Z + (diff.Z) / 2 + 0.5, player.getRotation(), player.getPitch());
+								player.sendMessage("§aTeleported to center");
+							}
+							else 
+								player.sendMessage("§cArea has not a single block as center");
+						}
+						else
+							player.sendMessage("§cBoth positions must be set");
+					}
+					else 
+						player.sendMessage("§cOnly available in area mode");
 				}
-			else if (split[1].equalsIgnoreCase("modehelp"))
-			{
-				player.sendMessage("§cMeasuringTape Modes:");
-				player.sendMessage("§cdistance - direct distance between both positions");
-				player.sendMessage("§cvectors -xyz-vectors between the positions");
-				player.sendMessage("§carea - area between the points");
-				player.sendMessage("§cblocks - amount of blocks in x, y and z axis between positions");
-				player.sendMessage("§ctrack - distance with multiple points");
+				else if (split[1].equalsIgnoreCase("help"))
+					{
+						player.sendMessage("§cMeasuringTape Commands:");
+						if (player.canUseCommand("/mtcangetstring"))
+							player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
+						player.sendMessage("§c/mt read //Displays the distance again");
+						player.sendMessage("§c/mt unset //Unsets both markers");
+						player.sendMessage("§c/mt mode [mode] //Toggles measuring mode");
+						player.sendMessage("§c/mt modehelp //Displays help to the modes");
+						if (player.canUseCommand("/mtteleport"))
+							player.sendMessage("§c/mt tp //Teleports to the center of the selected area");
+					}
+				else if (split[1].equalsIgnoreCase("modehelp"))
+				{
+					player.sendMessage("§cMeasuringTape Modes:");
+					player.sendMessage("§cdistance - direct distance between both positions");
+					player.sendMessage("§cvectors -xyz-vectors between the positions");
+					player.sendMessage("§carea - area between the points");
+					player.sendMessage("§cblocks - amount of blocks in x, y and z axis between positions");
+					player.sendMessage("§ctrack - distance with multiple points");
+				}
+				else
+					player.sendMessage("§cWrong argument. Type /mt help for help");
+				return true;
 			}
-			else
-				player.sendMessage("§cWrong argument. Type /mt help for help");
-			return true;
+			return false;
 		}
 	}
 	
