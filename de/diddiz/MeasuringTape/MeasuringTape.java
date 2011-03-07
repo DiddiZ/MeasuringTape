@@ -1,5 +1,5 @@
 //Author: DiddiZ
-//Date: 2011-02-04
+//Date: 2011-02-28
 
 package de.diddiz.MeasuringTape;
 
@@ -12,13 +12,13 @@ import java.util.logging.Level;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockDamageLevel;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.BlockRightClickEvent;
-import org.bukkit.event.player.PlayerChatEvent;
-import org.bukkit.event.player.PlayerListener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
@@ -29,11 +29,55 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 public class MeasuringTape extends JavaPlugin
 {
     private ArrayList<Session> sessions = new ArrayList<Session>();
-    private int tapeDelay;
-    private int blocksPerString;
-    private boolean defaultEnabled;
-    private boolean usePermissions = false;
+    static int tapeDelay;
+    static int blocksPerString;
+    static boolean defaultEnabled;
+    static boolean usePermissions = false;
     
+	public enum MeasuringMode {
+		DISTANCE, VECTORS, AREA, BLOCKS, TRACK, VOLUME;
+	}
+	
+	public enum MouseButton	{
+		LEFT, RIGHT;
+	}
+    
+	private class Session
+	{
+		public String user;
+		public Boolean MTEnabled;
+		public ArrayList<Location> pos;
+	    public Boolean pos1Set;
+	    public Boolean pos2Set;
+	    public MeasuringMode mode;
+	    public Date lastTape;
+	    
+	    public Session (Player player) {
+	    	user = player.getName();
+	    	lastTape = new Date(0);
+	    	mode = MeasuringMode.DISTANCE;
+	    	MTEnabled = MeasuringTape.defaultEnabled;
+	    	ResetPos();
+	    }
+	    
+	    public void ResetPos() {
+	    	pos = new ArrayList<Location>();
+	    	this.pos.add(null);
+	    	this.pos.add(null);
+			this.pos1Set = false;
+			this.pos2Set = false;
+	    }
+	    
+		@Override
+		public boolean equals(Object obj) {
+			if (obj == null)
+				return false;
+			if (!user.equalsIgnoreCase(((Session)obj).user))
+				return false;
+			return true;
+		}
+	}
+	
 	@Override
 	public void onEnable() {
 		try	{
@@ -63,9 +107,8 @@ public class MeasuringTape extends JavaPlugin
 			getServer().getLogger().log(Level.SEVERE, "[MeasuringTape] Exception while reading config.yml", e);
         	getServer().getPluginManager().disablePlugin(this);
 		}
-	    PluginManager pm = getServer().getPluginManager();
-	    MeasuringTapeBlockListener measuringTapeBlockListener = new MeasuringTapeBlockListener();
-	    pm.registerEvent(Event.Type.PLAYER_COMMAND, new MeasuringTapePlayerListener(), Event.Priority.Normal, this);
+        MeasuringTapeBlockListener measuringTapeBlockListener = new MeasuringTapeBlockListener();
+        PluginManager pm = getServer().getPluginManager();
 		pm.registerEvent(Event.Type.BLOCK_DAMAGED, measuringTapeBlockListener, Event.Priority.Monitor, this);
 		pm.registerEvent(Event.Type.BLOCK_RIGHTCLICKED, measuringTapeBlockListener, Event.Priority.Monitor, this);
 		getServer().getLogger().info("MeasuringTape v" + this.getDescription().getVersion() + " by DiddiZ enabled");
@@ -76,137 +119,97 @@ public class MeasuringTape extends JavaPlugin
 		getServer().getLogger().info("MeasuringTape Disabled");
 	}
     
-	public enum MeasuringMode {
-		DISTANCE, VECTORS, AREA, BLOCKS, TRACK, VOLUME;
-	}
-	
-	public enum MouseButton	{
-		LEFT, RIGHT;
-	}
-	
-	private class Session
-    {
-    	public String user;
-    	public Boolean MTEnabled;
-    	public ArrayList<Location> pos;
-        public Boolean pos1Set;
-        public Boolean pos2Set;
-        public MeasuringMode mode;
-        public Date lastTape;
-        
-        public Session (Player player) {
-        	user = player.getName();
-        	lastTape = new Date(0);
-        	mode = MeasuringMode.DISTANCE;
-        	MTEnabled = defaultEnabled;
-        	ResetPos();
-        }
-        
-        public void ResetPos() {
-        	pos = new ArrayList<Location>();
-        	this.pos.add(null);
-        	this.pos.add(null);
-			this.pos1Set = false;
-			this.pos2Set = false;
-        }
-        
-		@Override
-		public boolean equals(Object obj) {
-			if (obj == null)
-				return false;
-			if (!user.equalsIgnoreCase(((Session)obj).user))
-				return false;
-			return true;
-		}
-    }
-    
-	private class MeasuringTapePlayerListener extends PlayerListener
-	{ 
-		public void onPlayerCommand(PlayerChatEvent event) {
-			String[] split = event.getMessage().split(" ");
-			if (split[0].equalsIgnoreCase("/mt")) {
-				event.setCancelled(true);
-				Player player = event.getPlayer();
+	@Override
+	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args)	{
+		if (cmd.getName().equalsIgnoreCase("mt")) {
+			if ((sender instanceof Player)) {
+				Player player = (Player)sender;
 				Session session = GetSession(player);
-				if (split.length == 1)
+				if (args.length == 0)
 					player.sendMessage("§cNo argument. Type /mt help for help");
-				else if (split[1].equalsIgnoreCase("tape") && CheckPermission(event.getPlayer(), "measuringtape.tape"))	{
-					if (player.getInventory().contains(287)) {
-						player.sendMessage("§cYou have alredy a string"); 
-						player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
-					} else {
-						long mins = (new Date().getTime() - session.lastTape.getTime()) / 60000;
-						if (mins >= tapeDelay) {
-							int free = player.getInventory().firstEmpty();
-							if (free >= 0) {
-								player.getInventory().setItem(free, player.getItemInHand());
-								player.setItemInHand(new ItemStack(287, 1));
-								session.lastTape = new Date();
-								player.sendMessage("§aHere is your measuring tape"); 
-								player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
-							} else
-								player.sendMessage("§cYou have no empty slot in your inventory"); 
+				else if (args[0].equalsIgnoreCase("tape") && CheckPermission(player, "measuringtape.tape"))	{
+					if (CheckPermission(player, "measuringtape.tape")) {
+						if (player.getInventory().contains(287)) {
+							player.sendMessage("§cYou have alredy a string"); 
+							player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
 						} else {
-							player.sendMessage("§cYot got your last tape " + mins + "min ago.");
-							player.sendMessage("§cYou have to wait " + (tapeDelay - mins) + " minutes");
+							long mins = (new Date().getTime() - session.lastTape.getTime()) / 60000;
+							if (mins >= tapeDelay) {
+								int free = player.getInventory().firstEmpty();
+								if (free >= 0) {
+									player.getInventory().setItem(free, player.getItemInHand());
+									player.setItemInHand(new ItemStack(287, 1));
+									session.lastTape = new Date();
+									player.sendMessage("§aHere is your measuring tape"); 
+									player.sendMessage("§dLeft click: select pos #1; Right click select pos #2"); 
+								} else
+									player.sendMessage("§cYou have no empty slot in your inventory"); 
+							} else {
+								player.sendMessage("§cYou got your last tape " + mins + "min ago.");
+								player.sendMessage("§cYou have to wait " + (tapeDelay - mins) + " minutes");
+							}
 						}
-					}
-				} else if (split[1].equalsIgnoreCase("read"))
+					} else
+						player.sendMessage("§cYou aren't allowed to do this");
+				} else if (args[0].equalsIgnoreCase("read"))
 					ShowDistance(session);
-				else if (split[1].equalsIgnoreCase("unset")) {
+				else if (args[0].equalsIgnoreCase("unset")) {
 					session.ResetPos();
 					player.sendMessage("§aMeasuring tape rolled up");
-				} else if (split[1].equalsIgnoreCase("mode")) {
-					if (split.length != 3)
+				} else if (args[0].equalsIgnoreCase("mode")) {
+					if (args.length != 2)
 						player.sendMessage("§cCorrect usage: /mt mode [mode]");
-					else if (split[2].equalsIgnoreCase("distance")) {
+					else if (args[1].equalsIgnoreCase("distance")) {
 						session.mode = MeasuringMode.DISTANCE;
 						player.sendMessage("§aMeasuring mode set to distance");
-					} else if (split[2].equalsIgnoreCase("vectors")) {
+					} else if (args[1].equalsIgnoreCase("vectors")) {
 						session.mode = MeasuringMode.VECTORS;
 						player.sendMessage("§aMeasuring mode set to vectors");
-					} else if (split[2].equalsIgnoreCase("area")) {
+					} else if (args[1].equalsIgnoreCase("area")) {
 						session.mode = MeasuringMode.AREA;
 						player.sendMessage("§aMeasuring mode set to area");
-					} else if (split[2].equalsIgnoreCase("blocks"))	{
+					} else if (args[1].equalsIgnoreCase("blocks"))	{
 						session.mode = MeasuringMode.BLOCKS;
 						player.sendMessage("§aMeasuring mode set to blocks");
-					} else if (split[2].equalsIgnoreCase("track")) {
+					} else if (args[1].equalsIgnoreCase("track")) {
 						session.mode = MeasuringMode.TRACK;
 						session.ResetPos();
 						player.sendMessage("§aMeasuring mode set to track");
-					} else if (split[2].equalsIgnoreCase("volume"))	{
+					} else if (args[1].equalsIgnoreCase("volume"))	{
 						session.mode = MeasuringMode.VOLUME;
 						player.sendMessage("§aMeasuring mode set to volume");
 					} else
 						player.sendMessage("§cWrong argument. Type /mt for help");
-				} else if (split[1].equalsIgnoreCase("tp") && CheckPermission(event.getPlayer(), "measuringtape.tp")) {
-					if (session.mode == MeasuringMode.AREA && session.pos1Set && session.pos1Set) {
-						Location diff = GetDiff(session.pos.get(0),session.pos.get(1));
-						if ((diff.getBlockX()) % 2 == 0 && (diff.getBlockZ()) % 2 == 0)	{
-							double x = session.pos.get(0).getBlockX() + diff.getBlockX() / 2 + 0.5;
-							double z = session.pos.get(0).getBlockZ() + (diff.getBlockZ()) / 2 + 0.5;
-							player.teleportTo(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
-							player.sendMessage("§aTeleported to center");
+				} else if (args[0].equalsIgnoreCase("tp")) {
+					if (CheckPermission(player, "measuringtape.tp")) {
+						if (session.mode == MeasuringMode.AREA && session.pos1Set && session.pos1Set) {
+							Location diff = GetDiff(session.pos.get(0),session.pos.get(1));
+							if ((diff.getBlockX()) % 2 == 0 && (diff.getBlockZ()) % 2 == 0)	{
+								double x = session.pos.get(0).getBlockX() + diff.getBlockX() / 2 + 0.5;
+								double z = session.pos.get(0).getBlockZ() + (diff.getBlockZ()) / 2 + 0.5;
+								player.teleportTo(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
+								player.sendMessage("§aTeleported to center");
+							} else 
+								player.sendMessage("§cArea has not a single block as center");
 						} else 
-							player.sendMessage("§cArea has not a single block as center");
-					} else 
-						player.sendMessage("§cBoth positions must be set and must be in area mode");
-				} else if (split[1].equalsIgnoreCase("help")) {
+							player.sendMessage("§cBoth positions must be set and must be in area mode");
+					} else
+						player.sendMessage("§cYou aren't allowed to do this");
+				} else if (args[0].equalsIgnoreCase("help")) {
 					player.sendMessage("§dMeasuringTape Commands:");
-					if (CheckPermission(event.getPlayer(), "measuringtape.tape"))
+					if (CheckPermission(player, "measuringtape.tape"))
 						player.sendMessage("§d/mt tape //Gives a measuring tape");
 					player.sendMessage("§d/mt read //Displays the distance again");
 					player.sendMessage("§d/mt unset //Unsets both markers");
 					player.sendMessage("§d/mt mode [mode] //Toggles measuring mode");
 					player.sendMessage("§d/mt modehelp //Displays help to the modes");
-					if (CheckPermission(event.getPlayer(), "measuringtape.tp"))
+					if (CheckPermission(player, "measuringtape.tp"))
 						player.sendMessage("§d/mt tp //Teleports to the center of the selected area");
 					if (session.MTEnabled)
 						player.sendMessage("§d/mt disable //Disables string attaching");
 					else
 						player.sendMessage("§d/mt enable //Enables string attaching");
-				} else if (split[1].equalsIgnoreCase("modehelp")) {
+				} else if (args[0].equalsIgnoreCase("modehelp")) {
 					player.sendMessage("§dMeasuringTape Modes:");
 					player.sendMessage("§ddistance - direct distance between both positions");
 					player.sendMessage("§dvectors -xyz-vectors between the positions");
@@ -214,16 +217,19 @@ public class MeasuringTape extends JavaPlugin
 					player.sendMessage("§dblocks - amount of blocks in x, y and z axis between positions");
 					player.sendMessage("§dtrack - distance with multiple points");
 					player.sendMessage("§dvolume - volume of a cuboid");
-				} else if (split[1].equalsIgnoreCase("enable"))	{
+				} else if (args[0].equalsIgnoreCase("enable"))	{
 					session.MTEnabled = true;
 					player.sendMessage("§dMeasuring tape enabled");
-				} else if (split[1].equalsIgnoreCase("disable")) {
+				} else if (args[0].equalsIgnoreCase("disable")) {
 					session.MTEnabled = false;
 					player.sendMessage("§dMeasuring tape disabled");
 				} else
 					player.sendMessage("§cWrong argument. Type /mt help for help");
-			}
-		}
+			} else
+				sender.sendMessage("You aren't a player");
+			return true;
+		} else
+			return false;
 	}
     
 	private class MeasuringTapeBlockListener extends BlockListener
