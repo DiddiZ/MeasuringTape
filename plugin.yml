@@ -1,0 +1,6 @@
+name: MeasuringTape
+version: 0.6
+author: DiddiZ
+website: http://www.diddiz.de/minecraft/
+main: com.bukkit.diddiz.MeasuringTape.MeasuringTape
+description: Channels a string into a measuring tape.
