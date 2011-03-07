@@ -14,7 +14,7 @@ public class MeasuringTape extends Plugin
 	static Logger minecraftLog = Logger.getLogger("Minecraft");
     private Listener listener = new Listener();
     private String name = "MeasuringTape";
-    private String version = "0.4c";
+    private String version = "0.5";
     private ArrayList<Session> sessions = new ArrayList<Session>();
     private Integer tapeDelay;
     private Integer blocksPerString;
@@ -80,11 +80,10 @@ public class MeasuringTape extends Plugin
 		}
 	}
     
-    class Session
+    private class Session
     {
     	public String user;
-        public Location pos1 = new Location();
-        public Location pos2 = new Location();
+    	public ArrayList<Position> pos = new ArrayList<Position>();
         public Boolean pos1Set = false;
         public Boolean pos2Set = false;
         public Integer mode = 0;
@@ -93,10 +92,44 @@ public class MeasuringTape extends Plugin
         public Session (Player player)
         {
         	this.user = player.getName();
+        	this.ResetPos();
+        }
+        
+        public void ResetPos()
+        {
+        	pos = new ArrayList<Position>();
+        	this.pos.add(new Position());
+        	this.pos.add(new Position());
+			this.pos1Set = false;
+			this.pos2Set = false;
         }
     }
 
-	class Listener extends PluginListener
+    private class Position
+    {
+    	public int X, Y, Z;
+    	
+    	Position()
+    	{
+    		
+    	}
+    	
+    	Position (int x, int y, int z)
+    	{
+    		this.X = x;
+    		this.Y = y;
+    		this.Z = z;
+    	}
+    	
+    	Position (Block block)
+    	{
+    		this.X = block.getX();
+    		this.Y = block.getY();
+    		this.Z = block.getZ();
+    	}
+    }
+    
+	private class Listener extends PluginListener
 	{ 
 		public boolean onBlockDestroy(Player player, Block block) 
 		{
@@ -106,17 +139,18 @@ public class MeasuringTape extends Plugin
 				return false;
 			if (block.getStatus() != 0)
 				return false;
-			if ( block.getX() == 0 && block.getY() == 0 && block.getZ() == 0)
-				return false;
 			Session session = GetSession(player);
-    		session.pos1.x = block.getX();
-    		session.pos1.y = block.getY();
-    		session.pos1.z = block.getZ();
-    		if (!session.pos1Set)
-    		{
-    			session.pos1Set = true;
-    			player.sendMessage("§aMeasuring Tape attached to first position");
-    		}
+			if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
+				AttachToFirst(session, new Position(block), player);
+			if (session.mode == 4)
+			{
+	    		if (!session.pos1Set)
+	    			AttachToFirst(session, new Position(block), player);
+	    		else if (!session.pos2Set)
+	    			AttachToSecond(session, new Position(block), player);
+	    		else
+	    			session.pos.add(new Position(block));
+			}
 	    	if (session.pos1Set && session.pos2Set)
 		    	ShowDistance(session);
 			return true;
@@ -129,14 +163,17 @@ public class MeasuringTape extends Plugin
 			if (!player.canUseCommand("/measuringtape"))
 				return;
 	    	Session session = GetSession(player);
-    		session.pos2.x = blockClicked.getX();
-    		session.pos2.y = blockClicked.getY();
-    		session.pos2.z = blockClicked.getZ();
-    		if (!session.pos2Set)
-    		{
-    			session.pos2Set = true;
-    			player.sendMessage("§aMeasuring Tape attached to second position");
-    		}
+			if (session.mode == 0 || session.mode == 1 || session.mode == 2 || session.mode == 3)
+				AttachToSecond(session, new Position(blockClicked), player);
+			if (session.mode == 4)
+			{
+	    		if (!session.pos1Set)
+	    			AttachToFirst(session, new Position(blockClicked), player);
+	    		else if (!session.pos2Set)
+	    			AttachToSecond(session, new Position(blockClicked), player);
+	    		else
+	    			session.pos.add(new Position(blockClicked));
+			}
 	    	if (session.pos1Set && session.pos2Set)
 		    	ShowDistance(session);
 		}
@@ -189,10 +226,7 @@ public class MeasuringTape extends Plugin
 			}
 			else if (split[1].equalsIgnoreCase("unset"))
 			{
-				session.pos1 = new Location();
-				session.pos1Set = false;
-				session.pos2 = new Location();
-				session.pos2Set = false;
+				session.ResetPos();
 				player.sendMessage("§aMeasuring tape rolled up");
 			}
 			else if (split[1].equalsIgnoreCase("mode"))
@@ -216,6 +250,17 @@ public class MeasuringTape extends Plugin
 					session.mode = 2;
 					player.sendMessage("§aMeasuring mode set to area");
 				}
+				else if (split[2].equalsIgnoreCase("blocks"))
+				{
+					session.mode = 3;
+					player.sendMessage("§aMeasuring mode set to blocks");
+				}
+				else if (split[2].equalsIgnoreCase("track"))
+				{
+					session.mode = 4;
+					session.ResetPos();
+					player.sendMessage("§aMeasuring mode set to track");
+				}
 				else
 					player.sendMessage("§cWrong argument. Type /mt for help");
 			}
@@ -225,9 +270,10 @@ public class MeasuringTape extends Plugin
 				{
 					if (session.pos1Set && session.pos1Set)
 					{
-						if ((session.pos2.x - session.pos1.x) % 2 == 0 && (session.pos2.z - session.pos1.z) % 2 == 0)
+						Position diff = GetDifference(session.pos.get(0), session.pos.get(1));
+						if ((diff.X) % 2 == 0 && (diff.Z) % 2 == 0)
 						{
-							player.teleportTo(session.pos1.x + (session.pos2.x - session.pos1.x) / 2 + 0.5 , Math.max(session.pos1.y, session.pos2.y)+ 1, session.pos1.z + (session.pos2.z - session.pos1.z) / 2 + 0.5, player.getRotation(), player.getPitch());
+							player.teleportTo(session.pos.get(0).X + diff.X / 2 + 0.5 , Math.max(session.pos.get(0).Y, session.pos.get(1).Y) + 1, session.pos.get(0).Z + (diff.Z) / 2 + 0.5, player.getRotation(), player.getPitch());
 							player.sendMessage("§aTeleported to center");
 						}
 						else 
@@ -251,58 +297,90 @@ public class MeasuringTape extends Plugin
 		Player player = etc.getServer().getPlayer(session.user);
 		if (session.pos1Set && session.pos2Set)
 		{
-			int x; int y; int z; double distance;
+			Position diff = GetDifference(session.pos.get(0), session.pos.get(1));
+			int x, y, z; double distance = 0;
 			int stringsAvailable = CountItem(player.getInventory(), 287);
 			int stringsNeeded;
 			switch(session.mode)
 			{
 				case 0:
-					distance = Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / (double)10;
-					if (blocksPerString == -1)
+					distance = Math.round(Math.sqrt(Math.pow(diff.X, 2) + Math.pow(diff.Y, 2) + Math.pow(diff.Z, 2)) * 10) / (double)10;
+					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+					if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
 						player.sendMessage("Distance: " + distance + "m");
 					else
-					{
-						stringsNeeded = (int)Math.ceil(distance / blocksPerString);
-						if (stringsNeeded <= stringsAvailable)
-							player.sendMessage("Distance: " + distance + "m");
-						else
-							player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
-					}
+						player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					break;
 				case 1:
-					x = (int)Math.abs(session.pos2.x - session.pos1.x);
-					y = (int)Math.abs(session.pos2.y - session.pos1.y);
-					z = (int)Math.abs(session.pos2.z - session.pos1.z);
-					if (blocksPerString == -1)
+					x = Math.abs(diff.X);
+					y = Math.abs(diff.Y);
+					z = Math.abs(diff.Z);
+					stringsNeeded = (int)Math.ceil((x + y + z) / blocksPerString);
+					if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
 						player.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
 					else
-					{
-						stringsNeeded = x + y + z;
-						if (stringsNeeded <= stringsAvailable)
-							player.sendMessage("Vectors: X" + x + " Y" + z + " Z" + y);
-						else
-							player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
-					}
+						player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					break;
 				case 2:
-					x = (int)(Math.abs(session.pos2.x - session.pos1.x) + 1);
-					z = (int)(Math.abs(session.pos2.z - session.pos1.z) + 1);
-					if (blocksPerString == -1)
+					x = Math.abs(diff.X) + 1;
+					z = Math.abs(diff.Z) + 1;
+					stringsNeeded = (int)Math.ceil((x + z) / blocksPerString);
+					if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
 						player.sendMessage("Area: " + x + "x" + z);
 					else
+						player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+					break;
+				case 3:
+					x = (int)Math.ceil((Math.abs(diff.X) + Math.abs(diff.Y) + Math.abs(diff.Z) + 1) / blocksPerString);
+					stringsNeeded = x;
+					if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
+						player.sendMessage("Blocks: " + x);
+					else
+						player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+					break;
+				case 4:
+					for (int i = 1; i < session.pos.size(); i++)
 					{
-						stringsNeeded = x + z;
-						if (stringsNeeded <= stringsAvailable)
-							player.sendMessage("Area: " + x + "x" + z);
-						else
-							player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
+						diff = GetDifference(session.pos.get(i - 1), session.pos.get(i));
+						distance += Math.sqrt(Math.pow(diff.X, 2) + Math.pow(diff.Y, 2) + Math.pow(diff.Z, 2));
 					}
+					distance = Math.round(distance * 10) / (double)10;
+					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+					if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
+						player.sendMessage("Distance: " + distance);
+					else
+						player.sendMessage("§cYou have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 					break;
 			}
 		}
 		else
 		{
 			player.sendMessage("§aBoth positions must be set");
+		}
+	}
+	
+	private Position GetDifference(Position pos1, Position pos2)
+	{
+		return new Position(pos2.X - pos1.X, pos2.Y - pos1.Y, pos2.Z - pos1.Z);
+	}
+	
+	private void AttachToFirst(Session session, Position pos, Player player)
+	{
+		session.pos.set(0, pos);
+		if (!session.pos1Set)
+		{
+			session.pos1Set = true;
+			player.sendMessage("§aMeasuring Tape attached to first position");
+		}
+	}
+	
+	private void AttachToSecond(Session session, Position pos, Player player)
+	{
+		session.pos.set(1, pos);
+		if (!session.pos2Set)
+		{
+			session.pos2Set = true;
+			player.sendMessage("§aMeasuring Tape attached to second position");
 		}
 	}
 	
