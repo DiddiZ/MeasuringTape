@@ -9,7 +9,7 @@ public class MeasuringTape extends Plugin
     private Listener listener = new Listener();
     private Logger log;
     private String name = "MeasuringTape";
-    private String version = "0.1";
+    private String version = "0.2";
     private ArrayList<Session> sessions = new ArrayList<Session>();
 
     public void enable()
@@ -62,8 +62,11 @@ public class MeasuringTape extends Plugin
     		session.pos1.x = block.getX();
     		session.pos1.y = block.getY();
     		session.pos1.z = block.getZ();
-    		session.pos1Set = true;
-	    	player.sendMessage("§aMeasuring Tape attached to first position");
+    		if (!session.pos1Set)
+    		{
+    			session.pos1Set = true;
+    			player.sendMessage("§aMeasuring Tape attached to first position");
+    		}
 	    	if (session.pos1Set && session.pos2Set)
 		    	ShowDistance(session);
 	    	SetSession(session);
@@ -80,8 +83,11 @@ public class MeasuringTape extends Plugin
     		session.pos2.x = blockClicked.getX();
     		session.pos2.y = blockClicked.getY();
     		session.pos2.z = blockClicked.getZ();
-    		session.pos2Set = true;
-	    	player.sendMessage("§aMeasuring Tape attached to second position");
+    		if (!session.pos2Set)
+    		{
+    			session.pos2Set = true;
+    			player.sendMessage("§aMeasuring Tape attached to second position");
+    		}
 	    	if (session.pos1Set && session.pos2Set)
 		    	ShowDistance(session);
 	    	SetSession(session);
@@ -98,7 +104,7 @@ public class MeasuringTape extends Plugin
 				player.sendMessage("§c/mt tape //Gives a measuring tape to the player");
 				player.sendMessage("§c/mt read //Displays the distance again");
 				player.sendMessage("§c/mt unset //Unsets both markers");
-				player.sendMessage("§c/mt mode [direct|vectors] //Toggles the measuring mode");
+				player.sendMessage("§c/mt mode [distance|vectors|area] //Toggles the measuring mode");
 			}
 			else if (split[1].equalsIgnoreCase("tape"))
 			{
@@ -132,15 +138,20 @@ public class MeasuringTape extends Plugin
 				{
 					player.sendMessage("§cCorrect usage: /mt mode [mode]");
 				}
-				else if (split[2].equalsIgnoreCase("direct"))
+				else if (split[2].equalsIgnoreCase("distance"))
 				{
 					session.mode = 0;
-					player.sendMessage("§aMeasuring mode set to direct");
+					player.sendMessage("§aMeasuring mode set to distance");
 				}
 				else if (split[2].equalsIgnoreCase("vectors"))
 				{
 					session.mode = 1;
 					player.sendMessage("§aMeasuring mode set to vectors");
+				}
+				else if (split[2].equalsIgnoreCase("area"))
+				{
+					session.mode = 2;
+					player.sendMessage("§aMeasuring mode set to area");
 				}
 				else
 					player.sendMessage("§cWrong argument. Type /mt for help");
@@ -155,10 +166,18 @@ public class MeasuringTape extends Plugin
 	{
 		if (session.pos1Set && session.pos2Set)
 		{
-			if (session.mode == 0)
-	    		session.user.sendMessage("Distance: " + (double)Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / 10 + "m");
-	    	else if (session.mode == 1)
-	    		session.user.sendMessage("Distance: X" + (int)Math.abs(session.pos2.x - session.pos1.x)  + " Y" + (int)Math.abs(session.pos2.y - session.pos1.y) + " Z" + (int)Math.abs(session.pos2.z - session.pos1.z));
+			switch(session.mode)
+			{
+			case 0:
+				session.user.sendMessage("Distance: " + (double)Math.round(Math.sqrt(Math.pow(session.pos2.x - session.pos1.x, 2) + Math.pow(session.pos2.y - session.pos1.y, 2) + Math.pow(session.pos2.z - session.pos1.z, 2)) * 10) / 10 + "m");
+				break;
+			case 1:
+	    		session.user.sendMessage("Vectors: X" + (int)Math.abs(session.pos2.x - session.pos1.x)  + " Y" + (int)Math.abs(session.pos2.z - session.pos1.z) + " Z" + (int)Math.abs(session.pos2.y - session.pos1.y));
+	    		break;
+			case 2: 
+				session.user.sendMessage("Area: " + (int)(Math.abs(session.pos2.x - session.pos1.x) + 1) + "x" + "" + (int)(Math.abs(session.pos2.z - session.pos1.z) + 1));
+				break;
+			}
 		}
 		else
 		{
