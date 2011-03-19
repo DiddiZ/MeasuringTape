@@ -315,7 +315,7 @@ public class MeasuringTape extends JavaPlugin
 			String msg = "";
 			switch(session.mode) {
 				case DISTANCE:
-					distance = Math.round(Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2) + Math.pow(z, 2)) * 10) / (double)10;
+					distance = Math.round(Math.sqrt(x*x + y*y + z*z) * 10) / (double)10;
 					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
 					msg = "Distance: " + distance + "m";
 					break;
@@ -336,7 +336,7 @@ public class MeasuringTape extends JavaPlugin
 				case TRACK:
 					for (int i = 1; i < session.pos.size(); i++) {
 						diff = getDiff(session.pos.get(i - 1), session.pos.get(i));
-						distance += Math.sqrt(Math.pow(diff.getBlockX(), 2) + Math.pow(diff.getBlockY(), 2) + Math.pow(diff.getBlockZ(), 2));
+						distance += Math.sqrt(diff.getBlockX()*diff.getBlockX() + diff.getBlockY()*diff.getBlockY() + diff.getBlockZ()*diff.getBlockZ());
 					}
 					distance = Math.round(distance * 10) / (double)10;
 					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
