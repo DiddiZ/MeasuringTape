@@ -1,6 +1,7 @@
 package de.diddiz.MeasuringTape;
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -27,7 +28,7 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 
 public class MeasuringTape extends JavaPlugin
 {
-	private ArrayList<Session> sessions = new ArrayList<Session>();
+	private Hashtable<Integer, Session> sessions = new Hashtable<Integer, Session>();
 	private int tapeDelay;
 	private int blocksPerString;
 	private boolean useTargetBlock;
@@ -44,7 +45,7 @@ public class MeasuringTape extends JavaPlugin
 
 	private class Session
 	{
-		public String user;
+		public final String user;
 		public Boolean MTEnabled;
 		public ArrayList<Location> pos;
 		public Boolean pos1Set;
@@ -69,7 +70,14 @@ public class MeasuringTape extends JavaPlugin
 		}
 
 		@Override
+		public int hashCode() {
+			return user.hashCode();
+		}
+
+		@Override
 		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
 			if (obj == null)
 				return false;
 			if (!user.equalsIgnoreCase(((Session)obj).user))
@@ -357,13 +365,12 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	private Session getSession(Player player) {
-		int idx = sessions.indexOf(new Session(player));
-		if (idx != -1)
-			return sessions.get(idx);
-		else {
-			sessions.add(new Session(player));
-			return getSession(player);
+		Session session = sessions.get(player.getName().hashCode());
+		if (session == null) {
+			session = new Session(player);
+			sessions.put(player.getName().hashCode(), session);
 		}
+		return session;
 	}
 
 	private Location getDiff(Location loc1, Location loc2) {
