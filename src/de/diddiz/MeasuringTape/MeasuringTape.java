@@ -7,6 +7,7 @@ import java.util.logging.Level;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -240,7 +241,7 @@ public class MeasuringTape extends JavaPlugin
 	private class MTPlayerListener extends PlayerListener
 	{ 
 		public void onPlayerInteract(PlayerInteractEvent event) {
-			if (event.getItem().getTypeId() == 287 && CheckPermission(event.getPlayer(), "measuringtape.measure")) {
+			if (event.getMaterial() == Material.STRING && CheckPermission(event.getPlayer(), "measuringtape.measure")) {
 				if (event.getAction() == Action.LEFT_CLICK_BLOCK)
 					Attach(event.getPlayer(), event.getClickedBlock(), MouseButton.LEFT);
 				else if (event.getAction() == Action.RIGHT_CLICK_BLOCK)
