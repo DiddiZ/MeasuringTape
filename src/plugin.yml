@@ -1,7 +1,7 @@
 name: MeasuringTape
 version: 0.8
 author: DiddiZ
-website: http://www.diddiz.de/minecraft/
+website: http://diddiz.insane-architects.net/
 main: de.diddiz.MeasuringTape.MeasuringTape
 description: Channels a string into a measuring tape.
 commands:
