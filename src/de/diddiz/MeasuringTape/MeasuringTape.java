@@ -102,8 +102,14 @@ public class MeasuringTape extends JavaPlugin
 			defaultEnabled = getConfiguration().getBoolean("defaultEnabled", true);
 			usePermissions = getConfiguration().getBoolean("usePermissions", true);
 			useTargetBlock = getConfiguration().getBoolean("useTargetBlock", true);
-			if (usePermissions && getServer().getPluginManager().getPlugin("Permissions") == null)
-					getServer().getLogger().info("[MeasuringTape] Permissions plugin not found. Use default permissions.");
+			if (usePermissions)	{
+				if (getServer().getPluginManager().getPlugin("Permissions") != null) 
+					getServer().getLogger().info("[MeasuringTape] Permissions enabled");
+				else {
+					usePermissions = false;
+					getServer().getLogger().warning("[MeasuringTape] Permissions plugin not found. Using default permissions.");
+				}
+			}
 		} catch (Exception e) {
 			getServer().getLogger().log(Level.SEVERE, "[MeasuringTape] Exception while reading config.yml", e);
 			getServer().getPluginManager().disablePlugin(this);
