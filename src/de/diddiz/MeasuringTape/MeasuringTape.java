@@ -8,20 +8,15 @@ import java.util.logging.Level;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockDamageLevel;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
-import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.block.BlockListener;
-import org.bukkit.event.block.BlockRightClickEvent;
-import org.bukkit.event.player.PlayerAnimationEvent;
-import org.bukkit.event.player.PlayerAnimationType;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerListener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.nijikokun.bukkit.Permissions.Permissions;
@@ -113,13 +108,7 @@ public class MeasuringTape extends JavaPlugin
 			getServer().getLogger().log(Level.SEVERE, "[MeasuringTape] Exception while reading config.yml", e);
 			getServer().getPluginManager().disablePlugin(this);
 		}
-		PluginManager pm = getServer().getPluginManager();
-		MeasuringTapeBlockListener blockListener = new MeasuringTapeBlockListener();
-		pm.registerEvent(Event.Type.BLOCK_RIGHTCLICKED, blockListener, Event.Priority.Normal, this);
-		if (useTargetBlock)
-			pm.registerEvent(Event.Type.PLAYER_ANIMATION, new MeasuringTapePlayerListener(), Event.Priority.Normal, this);
-		else
-			pm.registerEvent(Event.Type.BLOCK_DAMAGED, blockListener, Event.Priority.Normal, this);
+		getServer().getPluginManager().registerEvent(Event.Type.PLAYER_INTERACT, new MTPlayerListener(), Event.Priority.Normal, this);
 		getServer().getLogger().info("MeasuringTape v" + getDescription().getVersion() + " by DiddiZ enabled");
 	}
 
@@ -197,7 +186,7 @@ public class MeasuringTape extends JavaPlugin
 							if ((diff.getBlockX()) % 2 == 0 && (diff.getBlockZ()) % 2 == 0)	{
 								double x = session.pos.get(0).getBlockX() + diff.getBlockX() / 2 + 0.5;
 								double z = session.pos.get(0).getBlockZ() + (diff.getBlockZ()) / 2 + 0.5;
-								player.teleportTo(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
+								player.teleport(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
 								player.sendMessage(ChatColor.GREEN + "Teleported to center.");
 							} else 
 								player.sendMessage(ChatColor.RED + "Area has not a single block as center.");
@@ -242,25 +231,19 @@ public class MeasuringTape extends JavaPlugin
 			return false;
 	}
 
-	private class MeasuringTapePlayerListener extends PlayerListener
+	private class MTPlayerListener extends PlayerListener
 	{ 
-		public void onPlayerAnimation(PlayerAnimationEvent event) {
-			if (event.getAnimationType() == PlayerAnimationType.ARM_SWING && event.getPlayer().getItemInHand().getTypeId() == 287 && CheckPermission(event.getPlayer(), "measuringtape.measure")) {
-				Attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), MouseButton.LEFT);
+		public void onPlayerInteract(PlayerInteractEvent event) {
+			if (event.getItem().getTypeId() == 287 && CheckPermission(event.getPlayer(), "measuringtape.measure")) {
+				if (event.getAction() == Action.LEFT_CLICK_BLOCK)
+					Attach(event.getPlayer(), event.getClickedBlock(), MouseButton.LEFT);
+				else if (event.getAction() == Action.RIGHT_CLICK_BLOCK)
+					Attach(event.getPlayer(), event.getClickedBlock(), MouseButton.RIGHT);
+				else if (event.getAction() == Action.LEFT_CLICK_AIR && useTargetBlock)
+					Attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), MouseButton.LEFT);
+				else if (event.getAction() == Action.RIGHT_CLICK_AIR && useTargetBlock)
+					Attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), MouseButton.RIGHT);
 			}
-		}
-	}
-
-	private class MeasuringTapeBlockListener extends BlockListener
-	{ 
-		public void onBlockDamage(BlockDamageEvent event) {
-			if (event.getPlayer().getItemInHand().getTypeId() == 287 && event.getDamageLevel() == BlockDamageLevel.STARTED && CheckPermission(event.getPlayer(), "measuringtape.measure"))
-			Attach(event.getPlayer(), event.getBlock(), MouseButton.LEFT);
-		}
-
-		public void onBlockRightClick(BlockRightClickEvent event) {
-			if (event.getPlayer().getItemInHand().getTypeId() == 287 && CheckPermission(event.getPlayer(), "measuringtape.measure"))
-				Attach(event.getPlayer(), event.getBlock(), MouseButton.RIGHT);
 		}
 	}
 
