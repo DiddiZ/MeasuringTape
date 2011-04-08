@@ -370,7 +370,7 @@ public class MeasuringTape extends JavaPlugin
 	private Integer CountItem(Inventory invent, Integer itemId)	{
 		int found = 0;
 		for (ItemStack item : invent.getContents()) {
-			if (item.getTypeId() == itemId)
+			if (item != null && item.getTypeId() == itemId)
 				found += item.getAmount();
 		}
 		return found;
