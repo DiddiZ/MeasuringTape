@@ -24,7 +24,7 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 
 public class MeasuringTape extends JavaPlugin
 {
-	private Hashtable<Integer, Session> sessions = new Hashtable<Integer, Session>();
+	private final Hashtable<Integer, Session> sessions = new Hashtable<Integer, Session>();
 	private int tapeDelay;
 	private int blocksPerString;
 	private boolean useTargetBlock;
@@ -59,10 +59,10 @@ public class MeasuringTape extends JavaPlugin
 
 		public void ResetPos() {
 			pos = new ArrayList<Location>();
-			this.pos.add(null);
-			this.pos.add(null);
-			this.pos1Set = false;
-			this.pos2Set = false;
+			pos.add(null);
+			pos.add(null);
+			pos1Set = false;
+			pos2Set = false;
 		}
 
 		@Override
@@ -86,7 +86,7 @@ public class MeasuringTape extends JavaPlugin
 	public void onEnable() {
 		try	{
 			getConfiguration().load();
-			List<String> keys = getConfiguration().getKeys(null);
+			final List<String> keys = getConfiguration().getKeys(null);
 			if (!keys.contains("tapeDelay"))
 				getConfiguration().setProperty("tapeDelay", 15);
 			if (!keys.contains("blocksPerString"))
@@ -104,14 +104,14 @@ public class MeasuringTape extends JavaPlugin
 			usePermissions = getConfiguration().getBoolean("usePermissions", true);
 			useTargetBlock = getConfiguration().getBoolean("useTargetBlock", true);
 			if (usePermissions)	{
-				if (getServer().getPluginManager().getPlugin("Permissions") != null) 
+				if (getServer().getPluginManager().getPlugin("Permissions") != null)
 					getServer().getLogger().info("[MeasuringTape] Permissions enabled");
 				else {
 					usePermissions = false;
 					getServer().getLogger().warning("[MeasuringTape] Permissions plugin not found. Using default permissions.");
 				}
 			}
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			getServer().getLogger().log(Level.SEVERE, "[MeasuringTape] Exception while reading config.yml", e);
 			getServer().getPluginManager().disablePlugin(this);
 		}
@@ -127,29 +127,29 @@ public class MeasuringTape extends JavaPlugin
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args)	{
 		if (cmd.getName().equalsIgnoreCase("mt")) {
-			if ((sender instanceof Player)) {
-				Player player = (Player)sender;
-				Session session = getSession(player);
+			if (sender instanceof Player) {
+				final Player player = (Player)sender;
+				final Session session = getSession(player);
 				if (args.length == 0) {
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "MeasuringTape v" + getDescription().getVersion() + " by DiddiZ");
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "Type /mt help for help");
 				} else if (args[0].equalsIgnoreCase("tape")) {
 					if (CheckPermission(player, "measuringtape.tape")) {
 						if (player.getInventory().contains(287)) {
-							player.sendMessage(ChatColor.RED + "You have alredy a string"); 
-							player.sendMessage(ChatColor.LIGHT_PURPLE + "Left click: select pos #1; Right click select pos #2."); 
+							player.sendMessage(ChatColor.RED + "You have alredy a string");
+							player.sendMessage(ChatColor.LIGHT_PURPLE + "Left click: select pos #1; Right click select pos #2.");
 						} else {
-							long mins = (System.currentTimeMillis() - session.lastTape) / 60000;
+							final long mins = (System.currentTimeMillis() - session.lastTape) / 60000;
 							if (mins >= tapeDelay) {
-								int free = player.getInventory().firstEmpty();
+								final int free = player.getInventory().firstEmpty();
 								if (free >= 0) {
 									player.getInventory().setItem(free, player.getItemInHand());
 									player.setItemInHand(new ItemStack(287, 1));
 									session.lastTape = System.currentTimeMillis();
-									player.sendMessage(ChatColor.GREEN + "Here is your measuring tape."); 
-									player.sendMessage(ChatColor.LIGHT_PURPLE + "Left click: select pos #1; Right click select pos #2."); 
+									player.sendMessage(ChatColor.GREEN + "Here is your measuring tape.");
+									player.sendMessage(ChatColor.LIGHT_PURPLE + "Left click: select pos #1; Right click select pos #2.");
 								} else
-									player.sendMessage(ChatColor.RED + "You have no empty slot in your inventory"); 
+									player.sendMessage(ChatColor.RED + "You have no empty slot in your inventory");
 							} else {
 								player.sendMessage(ChatColor.RED + "You got your last tape " + mins + " minutes ago.");
 								player.sendMessage(ChatColor.RED + "You have to wait " + (tapeDelay - mins) + " minutes.");
@@ -189,15 +189,15 @@ public class MeasuringTape extends JavaPlugin
 				} else if (args[0].equalsIgnoreCase("tp")) {
 					if (CheckPermission(player, "measuringtape.tp")) {
 						if (session.mode == MeasuringMode.AREA && session.pos1Set && session.pos1Set) {
-							Location diff = getDiff(session.pos.get(0),session.pos.get(1));
-							if ((diff.getBlockX()) % 2 == 0 && (diff.getBlockZ()) % 2 == 0)	{
-								double x = session.pos.get(0).getBlockX() + diff.getBlockX() / 2 + 0.5;
-								double z = session.pos.get(0).getBlockZ() + (diff.getBlockZ()) / 2 + 0.5;
+							final Location diff = getDiff(session.pos.get(0),session.pos.get(1));
+							if (diff.getBlockX() % 2 == 0 && diff.getBlockZ() % 2 == 0)	{
+								final double x = session.pos.get(0).getBlockX() + diff.getBlockX() / 2 + 0.5;
+								final double z = session.pos.get(0).getBlockZ() + diff.getBlockZ() / 2 + 0.5;
 								player.teleport(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
 								player.sendMessage(ChatColor.GREEN + "Teleported to center.");
-							} else 
+							} else
 								player.sendMessage(ChatColor.RED + "Area has not a single block as center.");
-						} else 
+						} else
 							player.sendMessage(ChatColor.RED + "Both positions must be set and must be in area mode.");
 					} else
 						player.sendMessage(ChatColor.RED + "You aren't allowed to do this.");
@@ -239,7 +239,7 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	private class MTPlayerListener extends PlayerListener
-	{ 
+	{
 		public void onPlayerInteract(PlayerInteractEvent event) {
 			if (event.getMaterial() == Material.STRING && CheckPermission(event.getPlayer(), "measuringtape.measure")) {
 				if (event.getAction() == Action.LEFT_CLICK_BLOCK)
@@ -255,23 +255,21 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	private boolean CheckPermission(Player player, String permission) {
-		if (usePermissions) 
+		if (usePermissions)
 			return Permissions.Security.permission(player, permission);
-		 else {
-			if (permission.equals("measuringtape.measure"))
-				return true;
-			else if (permission.equals("measuringtape.tape"))
-				return true;
-			else if (permission.equals("measuringtape.tp"))
-				return player.isOp();
-		}
+		else if (permission.equals("measuringtape.measure"))
+			return true;
+		else if (permission.equals("measuringtape.tape"))
+			return true;
+		else if (permission.equals("measuringtape.tp"))
+			return player.isOp();
 		return false;
 	}
 
 	private void Attach(Player player, Block block, MouseButton mousebutton) {
-		Session session = getSession(player);
+		final Session session = getSession(player);
 		if (session.MTEnabled) {
-			Location loc = new Location(block.getWorld(), block.getX(), block.getY(), block.getZ());
+			final Location loc = new Location(block.getWorld(), block.getX(), block.getY(), block.getZ());
 			if (session.mode == MeasuringMode.DISTANCE || session.mode == MeasuringMode.VECTORS || session.mode == MeasuringMode.AREA || session.mode == MeasuringMode.BLOCKS || session.mode == MeasuringMode.VOLUME) {
 				if (mousebutton == MouseButton.LEFT) {
 					session.pos.set(0, loc);
@@ -304,47 +302,47 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	private void ShowDistance(Session session) {
-		Player player = getServer().getPlayer(session.user);
+		final Player player = getServer().getPlayer(session.user);
 		if (session.pos1Set && session.pos2Set) {
 			Location diff = getDiff(session.pos.get(0),session.pos.get(1));
 			int x = Math.abs(diff.getBlockX()), y = Math.abs(diff.getBlockY()), z = Math.abs(diff.getBlockZ()); double distance = 0;
-			int stringsAvailable = CountItem(player.getInventory(), 287);
+			final int stringsAvailable = CountItem(player.getInventory(), 287);
 			int stringsNeeded = 0;
 			String msg = "";
 			switch(session.mode) {
-				case DISTANCE:
-					distance = Math.round(Math.sqrt(x*x + y*y + z*z) * 10) / (double)10;
-					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
-					msg = "Distance: " + distance + "m";
-					break;
-				case VECTORS:
-					stringsNeeded = (int)Math.ceil((x + y + z) / blocksPerString);
-					msg = "Vectors: X" + x + " Y" + z + " Z" + y;
-					break;
-				case AREA:
-					x += 1; z += 1;
-					stringsNeeded = (int)Math.ceil((x + z - 1) / blocksPerString);
-					msg = "Area: " + x + "x" + z + " (" + x*z + " m2)";
-					break;
-				case BLOCKS:
-					x += y + z + 1;
-					stringsNeeded = (int)Math.ceil(x / blocksPerString);
-					msg = "Blocks: " + x;
-					break;
-				case TRACK:
-					for (int i = 1; i < session.pos.size(); i++) {
-						diff = getDiff(session.pos.get(i - 1), session.pos.get(i));
-						distance += Math.sqrt(diff.getBlockX()*diff.getBlockX() + diff.getBlockY()*diff.getBlockY() + diff.getBlockZ()*diff.getBlockZ());
-					}
-					distance = Math.round(distance * 10) / (double)10;
-					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
-					msg = "Track: " + distance + "m";
-					break;
-				case VOLUME:
-					x += 1; y += 1; z += 1;
-					stringsNeeded = (int)Math.ceil((x + y + z - 2) / blocksPerString);
-					msg = "Volume: " + x + "x" + y + "x" + z + " (" +  x*y*z + " m3)";
-					break;
+			case DISTANCE:
+				distance = Math.round(Math.sqrt(x*x + y*y + z*z) * 10) / (double)10;
+				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+				msg = "Distance: " + distance + "m";
+				break;
+			case VECTORS:
+				stringsNeeded = (int)Math.ceil((x + y + z) / blocksPerString);
+				msg = "Vectors: X" + x + " Y" + z + " Z" + y;
+				break;
+			case AREA:
+				x += 1; z += 1;
+				stringsNeeded = (int)Math.ceil((x + z - 1) / blocksPerString);
+				msg = "Area: " + x + "x" + z + " (" + x*z + " m2)";
+				break;
+			case BLOCKS:
+				x += y + z + 1;
+				stringsNeeded = (int)Math.ceil(x / blocksPerString);
+				msg = "Blocks: " + x;
+				break;
+			case TRACK:
+				for (int i = 1; i < session.pos.size(); i++) {
+					diff = getDiff(session.pos.get(i - 1), session.pos.get(i));
+					distance += Math.sqrt(diff.getBlockX()*diff.getBlockX() + diff.getBlockY()*diff.getBlockY() + diff.getBlockZ()*diff.getBlockZ());
+				}
+				distance = Math.round(distance * 10) / (double)10;
+				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+				msg = "Track: " + distance + "m";
+				break;
+			case VOLUME:
+				x += 1; y += 1; z += 1;
+				stringsNeeded = (int)Math.ceil((x + y + z - 2) / blocksPerString);
+				msg = "Volume: " + x + "x" + y + "x" + z + " (" +  x*y*z + " m3)";
+				break;
 			}
 			if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
 				player.sendMessage(msg);
@@ -369,7 +367,7 @@ public class MeasuringTape extends JavaPlugin
 
 	private Integer CountItem(Inventory invent, Integer itemId)	{
 		int found = 0;
-		for (ItemStack item : invent.getContents()) {
+		for (final ItemStack item : invent.getContents()) {
 			if (item != null && item.getTypeId() == itemId)
 				found += item.getAmount();
 		}
