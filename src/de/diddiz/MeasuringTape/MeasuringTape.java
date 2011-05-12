@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.logging.Level;
-
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,7 +18,6 @@ import org.bukkit.event.player.PlayerListener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import com.nijikokun.bukkit.Permissions.Permissions;
 
 public class MeasuringTape extends JavaPlugin
@@ -35,7 +33,7 @@ public class MeasuringTape extends JavaPlugin
 		DISTANCE, VECTORS, AREA, BLOCKS, TRACK, VOLUME;
 	}
 
-	public enum MouseButton	{
+	public enum MouseButton {
 		LEFT, RIGHT;
 	}
 
@@ -49,7 +47,7 @@ public class MeasuringTape extends JavaPlugin
 		public MeasuringMode mode;
 		public long lastTape;
 
-		public Session (Player player) {
+		public Session(Player player) {
 			user = player.getName();
 			lastTape = 0;
 			mode = MeasuringMode.DISTANCE;
@@ -84,7 +82,7 @@ public class MeasuringTape extends JavaPlugin
 
 	@Override
 	public void onEnable() {
-		try	{
+		try {
 			getConfiguration().load();
 			final List<String> keys = getConfiguration().getKeys(null);
 			if (!keys.contains("tapeDelay"))
@@ -103,7 +101,7 @@ public class MeasuringTape extends JavaPlugin
 			defaultEnabled = getConfiguration().getBoolean("defaultEnabled", true);
 			usePermissions = getConfiguration().getBoolean("usePermissions", true);
 			useTargetBlock = getConfiguration().getBoolean("useTargetBlock", true);
-			if (usePermissions)	{
+			if (usePermissions) {
 				if (getServer().getPluginManager().getPlugin("Permissions") != null)
 					getServer().getLogger().info("[MeasuringTape] Permissions enabled");
 				else {
@@ -120,12 +118,12 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	@Override
-	public void onDisable()	{
+	public void onDisable() {
 		getServer().getLogger().info("MeasuringTape disabled");
 	}
 
 	@Override
-	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args)	{
+	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
 		if (cmd.getName().equalsIgnoreCase("mt")) {
 			if (sender instanceof Player) {
 				final Player player = (Player)sender;
@@ -174,14 +172,14 @@ public class MeasuringTape extends JavaPlugin
 					} else if (args[1].equalsIgnoreCase("area")) {
 						session.mode = MeasuringMode.AREA;
 						player.sendMessage(ChatColor.GREEN + "Measuring mode set to area.");
-					} else if (args[1].equalsIgnoreCase("blocks"))	{
+					} else if (args[1].equalsIgnoreCase("blocks")) {
 						session.mode = MeasuringMode.BLOCKS;
 						player.sendMessage(ChatColor.GREEN + "Measuring mode set to blocks.");
 					} else if (args[1].equalsIgnoreCase("track")) {
 						session.mode = MeasuringMode.TRACK;
 						session.ResetPos();
 						player.sendMessage(ChatColor.GREEN + "Measuring mode set to track.");
-					} else if (args[1].equalsIgnoreCase("volume"))	{
+					} else if (args[1].equalsIgnoreCase("volume")) {
 						session.mode = MeasuringMode.VOLUME;
 						player.sendMessage(ChatColor.GREEN + "Measuring mode set to volume.");
 					} else
@@ -189,11 +187,11 @@ public class MeasuringTape extends JavaPlugin
 				} else if (args[0].equalsIgnoreCase("tp")) {
 					if (CheckPermission(player, "measuringtape.tp")) {
 						if (session.mode == MeasuringMode.AREA && session.pos1Set && session.pos1Set) {
-							final Location diff = getDiff(session.pos.get(0),session.pos.get(1));
-							if (diff.getBlockX() % 2 == 0 && diff.getBlockZ() % 2 == 0)	{
+							final Location diff = getDiff(session.pos.get(0), session.pos.get(1));
+							if (diff.getBlockX() % 2 == 0 && diff.getBlockZ() % 2 == 0) {
 								final double x = session.pos.get(0).getBlockX() + diff.getBlockX() / 2 + 0.5;
 								final double z = session.pos.get(0).getBlockZ() + diff.getBlockZ() / 2 + 0.5;
-								player.teleport(new Location(player.getWorld(), x , player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
+								player.teleport(new Location(player.getWorld(), x, player.getWorld().getHighestBlockYAt((int)x, (int)z), z, player.getLocation().getYaw(), player.getLocation().getPitch()));
 								player.sendMessage(ChatColor.GREEN + "Teleported to center.");
 							} else
 								player.sendMessage(ChatColor.RED + "Area has not a single block as center.");
@@ -304,45 +302,49 @@ public class MeasuringTape extends JavaPlugin
 	private void ShowDistance(Session session) {
 		final Player player = getServer().getPlayer(session.user);
 		if (session.pos1Set && session.pos2Set) {
-			Location diff = getDiff(session.pos.get(0),session.pos.get(1));
-			int x = Math.abs(diff.getBlockX()), y = Math.abs(diff.getBlockY()), z = Math.abs(diff.getBlockZ()); double distance = 0;
+			Location diff = getDiff(session.pos.get(0), session.pos.get(1));
+			int x = Math.abs(diff.getBlockX()), y = Math.abs(diff.getBlockY()), z = Math.abs(diff.getBlockZ());
+			double distance = 0;
 			final int stringsAvailable = CountItem(player.getInventory(), 287);
 			int stringsNeeded = 0;
 			String msg = "";
-			switch(session.mode) {
-			case DISTANCE:
-				distance = Math.round(Math.sqrt(x*x + y*y + z*z) * 10) / (double)10;
-				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
-				msg = "Distance: " + distance + "m";
-				break;
-			case VECTORS:
-				stringsNeeded = (int)Math.ceil((x + y + z) / blocksPerString);
-				msg = "Vectors: X" + x + " Y" + z + " Z" + y;
-				break;
-			case AREA:
-				x += 1; z += 1;
-				stringsNeeded = (int)Math.ceil((x + z - 1) / blocksPerString);
-				msg = "Area: " + x + "x" + z + " (" + x*z + " m2)";
-				break;
-			case BLOCKS:
-				x += y + z + 1;
-				stringsNeeded = (int)Math.ceil(x / blocksPerString);
-				msg = "Blocks: " + x;
-				break;
-			case TRACK:
-				for (int i = 1; i < session.pos.size(); i++) {
-					diff = getDiff(session.pos.get(i - 1), session.pos.get(i));
-					distance += Math.sqrt(diff.getBlockX()*diff.getBlockX() + diff.getBlockY()*diff.getBlockY() + diff.getBlockZ()*diff.getBlockZ());
-				}
-				distance = Math.round(distance * 10) / (double)10;
-				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
-				msg = "Track: " + distance + "m";
-				break;
-			case VOLUME:
-				x += 1; y += 1; z += 1;
-				stringsNeeded = (int)Math.ceil((x + y + z - 2) / blocksPerString);
-				msg = "Volume: " + x + "x" + y + "x" + z + " (" +  x*y*z + " m3)";
-				break;
+			switch (session.mode) {
+				case DISTANCE:
+					distance = Math.round(Math.sqrt(x * x + y * y + z * z) * 10) / (double)10;
+					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+					msg = "Distance: " + distance + "m";
+					break;
+				case VECTORS:
+					stringsNeeded = (int)Math.ceil((x + y + z) / blocksPerString);
+					msg = "Vectors: X" + x + " Y" + z + " Z" + y;
+					break;
+				case AREA:
+					x += 1;
+					z += 1;
+					stringsNeeded = (int)Math.ceil((x + z - 1) / blocksPerString);
+					msg = "Area: " + x + "x" + z + " (" + x * z + " m2)";
+					break;
+				case BLOCKS:
+					x += y + z + 1;
+					stringsNeeded = (int)Math.ceil(x / blocksPerString);
+					msg = "Blocks: " + x;
+					break;
+				case TRACK:
+					for (int i = 1; i < session.pos.size(); i++) {
+						diff = getDiff(session.pos.get(i - 1), session.pos.get(i));
+						distance += Math.sqrt(diff.getBlockX() * diff.getBlockX() + diff.getBlockY() * diff.getBlockY() + diff.getBlockZ() * diff.getBlockZ());
+					}
+					distance = Math.round(distance * 10) / (double)10;
+					stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+					msg = "Track: " + distance + "m";
+					break;
+				case VOLUME:
+					x += 1;
+					y += 1;
+					z += 1;
+					stringsNeeded = (int)Math.ceil((x + y + z - 2) / blocksPerString);
+					msg = "Volume: " + x + "x" + y + "x" + z + " (" + x * y * z + " m3)";
+					break;
 			}
 			if (stringsNeeded <= stringsAvailable || blocksPerString == -1)
 				player.sendMessage(msg);
@@ -365,7 +367,7 @@ public class MeasuringTape extends JavaPlugin
 		return new Location(loc1.getWorld(), loc2.getBlockX() - loc1.getBlockX(), loc2.getBlockY() - loc1.getBlockY(), loc2.getBlockZ() - loc1.getBlockZ());
 	}
 
-	private Integer CountItem(Inventory invent, Integer itemId)	{
+	private Integer CountItem(Inventory invent, Integer itemId) {
 		int found = 0;
 		for (final ItemStack item : invent.getContents()) {
 			if (item != null && item.getTypeId() == itemId)
