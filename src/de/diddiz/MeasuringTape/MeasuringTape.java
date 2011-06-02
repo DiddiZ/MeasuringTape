@@ -14,7 +14,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
 import org.bukkit.event.block.Action;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -111,7 +110,7 @@ public class MeasuringTape extends JavaPlugin
 					else
 						player.sendMessage(ChatColor.RED + "Both positions must be set");
 				else if (args[0].equalsIgnoreCase("unset")) {
-					session.ResetPos();
+					session.resetPos();
 					player.sendMessage(ChatColor.GREEN + "Measuring tape rolled up.");
 				} else if (args[0].equalsIgnoreCase("mode")) {
 					if (args.length != 2)
@@ -119,7 +118,7 @@ public class MeasuringTape extends JavaPlugin
 					else
 						try {
 							session.mode = MeasuringMode.valueOf(args[1].toUpperCase());
-							player.sendMessage(ChatColor.GREEN + "Measuring mode set to " + session.mode.toString().toLowerCase());
+							player.sendMessage(ChatColor.GREEN + "Measuring mode set to " + args[1]);
 						} catch (final IllegalArgumentException ex) {
 							player.sendMessage(ChatColor.RED + "Wrong argument. Type /mt help for help.");
 						}
@@ -212,7 +211,6 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	private void showDistance(Player player, Session session) {
-
 		Location diff = getDiff(session.pos.get(0), session.pos.get(1));
 		int x = Math.abs(diff.getBlockX()), y = Math.abs(diff.getBlockY()), z = Math.abs(diff.getBlockZ());
 		double distance = 0;
@@ -220,7 +218,7 @@ public class MeasuringTape extends JavaPlugin
 		String msg = "";
 		switch (session.mode) {
 			case DISTANCE:
-				distance = Math.round(Math.sqrt(x * x + y * y + z * z) * 10) / (double)10;
+				distance = Math.round(Math.sqrt(x * x + y * y + z * z) * 10) / 10d;
 				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
 				msg = "Distance: " + distance + "m";
 				break;
@@ -257,7 +255,10 @@ public class MeasuringTape extends JavaPlugin
 				break;
 		}
 		if (blocksPerString != -1) {
-			final int stringsAvailable = countItem(player.getInventory(), 287);
+			int stringsAvailable = 0;
+			for (final ItemStack item : player.getInventory().getContents())
+				if (item != null && item.getTypeId() == 287)
+					stringsAvailable += item.getAmount();
 			if (stringsNeeded > stringsAvailable) {
 				player.sendMessage(ChatColor.RED + "You have not enought tape. You need " + (stringsNeeded - stringsAvailable) + " more");
 				return;
@@ -277,13 +278,5 @@ public class MeasuringTape extends JavaPlugin
 
 	private static Location getDiff(Location loc1, Location loc2) {
 		return new Location(loc1.getWorld(), loc2.getBlockX() - loc1.getBlockX(), loc2.getBlockY() - loc1.getBlockY(), loc2.getBlockZ() - loc1.getBlockZ());
-	}
-
-	private static Integer countItem(Inventory invent, Integer itemId) {
-		int found = 0;
-		for (final ItemStack item : invent.getContents())
-			if (item != null && item.getTypeId() == itemId)
-				found += item.getAmount();
-		return found;
 	}
 }

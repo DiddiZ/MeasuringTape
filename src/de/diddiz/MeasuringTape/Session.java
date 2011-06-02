@@ -6,29 +6,29 @@ import org.bukkit.Location;
 
 class Session
 {
-	public Boolean MTEnabled;
-	public List<Location> pos;
-	public MeasuringMode mode;
-	public long lastTape;
+	boolean MTEnabled;
+	final List<Location> pos = new ArrayList<Location>(2);
+	MeasuringMode mode;
+	long lastTape;
 
-	public Session(boolean enabled) {
+	Session(boolean enabled) {
 		lastTape = 0;
 		mode = MeasuringMode.DISTANCE;
 		MTEnabled = enabled;
-		ResetPos();
+		resetPos();
 	}
 
-	public void ResetPos() {
-		pos = new ArrayList<Location>();
+	void resetPos() {
+		pos.clear();
 		pos.add(null);
 		pos.add(null);
 	}
 
-	public boolean isPos1Set() {
+	boolean isPos1Set() {
 		return pos.get(0) != null;
 	}
 
-	public boolean isPos2Set() {
+	boolean isPos2Set() {
 		return pos.get(1) != null;
 	}
 }
