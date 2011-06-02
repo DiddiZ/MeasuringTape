@@ -1,12 +1,16 @@
 package de.diddiz.MeasuringTape;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -24,10 +28,11 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 public class MeasuringTape extends JavaPlugin
 {
 	private final HashMap<Integer, Session> sessions = new HashMap<Integer, Session>();
-	public int tapeDelay;
-	public int blocksPerString;
+	private int tapeDelay;
+	private int blocksPerString;
 	boolean useTargetBlock;
-	public boolean defaultEnabled;
+	private boolean defaultEnabled;
+	private Set<Integer> groundBlocks;
 	private PermissionHandler permissions = null;
 	private Logger log;
 
@@ -47,12 +52,15 @@ public class MeasuringTape extends JavaPlugin
 				config.setProperty("useTargetBlock", true);
 			if (!keys.contains("defaultEnabled"))
 				config.setProperty("defaultEnabled", true);
+			if (!keys.contains("groundBlocks"))
+				config.setProperty("groundBlocks", Arrays.asList(new Integer[]{1, 2, 3, 4, 12, 13}));
 			if (!config.save())
 				throw new IOException("Error while writing to config.yml");
 			tapeDelay = config.getInt("tapeDelay", 15);
 			blocksPerString = config.getInt("blocksPerString", -1);
 			defaultEnabled = config.getBoolean("defaultEnabled", true);
 			useTargetBlock = config.getBoolean("useTargetBlock", true);
+			groundBlocks = new HashSet<Integer>(config.getIntList("groundBlocks", null));
 		} catch (final Exception ex) {
 			log.log(Level.SEVERE, "[MeasuringTape] Could not load config", ex);
 			pm.disablePlugin(this);
@@ -137,6 +145,26 @@ public class MeasuringTape extends JavaPlugin
 							player.sendMessage(ChatColor.RED + "Both positions must be set and must be in area mode.");
 					} else
 						player.sendMessage(ChatColor.RED + "You aren't allowed to do this.");
+
+				} else if (args[0].equalsIgnoreCase("level")) {
+					if (session.mode == MeasuringMode.AREA && session.isPos1Set() && session.isPos2Set()) {
+						int level = 0;
+						final int lowerX = Math.min(session.pos.get(0).getBlockX(), session.pos.get(1).getBlockX());
+						final int upperX = Math.max(session.pos.get(0).getBlockX(), session.pos.get(1).getBlockX());
+						final int lowerY = Math.min(session.pos.get(0).getBlockY(), session.pos.get(1).getBlockY());
+						final int upperY = Math.max(session.pos.get(0).getBlockY(), session.pos.get(1).getBlockY());
+						final World world = player.getWorld();
+						for (int x = lowerX; x <= upperX; x++)
+							for (int z = lowerY; z <= upperY; z++)
+								for (int y = 127; y >= 0; y--)
+									if (groundBlocks.contains(world.getBlockTypeIdAt(x, y, z))) {
+										level += y;
+										break;
+									}
+						level = (int)((double)level / 256 + 0.5);
+						player.sendMessage("Optimal ground level is at " + level);
+					} else
+						player.sendMessage(ChatColor.RED + "Both positions must be set and must be in area mode.");
 				} else if (args[0].equalsIgnoreCase("help")) {
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "MeasuringTape Commands:");
 					if (hasPermission(player, "measuringtape.tape"))
@@ -147,6 +175,7 @@ public class MeasuringTape extends JavaPlugin
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "/mt modehelp //Displays help to the modes");
 					if (hasPermission(player, "measuringtape.tp"))
 						player.sendMessage(ChatColor.LIGHT_PURPLE + "/mt tp //Teleports to the center of the selected area");
+					player.sendMessage(ChatColor.LIGHT_PURPLE + "/mt level //Calculates the average height of an area");
 					if (session.MTEnabled)
 						player.sendMessage(ChatColor.LIGHT_PURPLE + "/mt disable //Disables string attaching");
 					else
