@@ -9,3 +9,16 @@ commands:
     description: 'MeasuringTape commands.'
     usage: 'Usage: /<command> help'
     aliases: []
+permissions:
+  measuringtape.*:
+    description: Gives access to all MeasuringTape commands
+    children:
+      measuringtape.tape: true
+      measuringtape: true
+      measuringtape: true
+  measuringtape.tape:
+    default: true
+  measuringtape.tp:
+    default: op
+  measuringtape.measure:
+    default: true

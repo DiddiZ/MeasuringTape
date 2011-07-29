@@ -123,7 +123,6 @@ public class MeasuringTape extends JavaPlugin
 							player.sendMessage(ChatColor.RED + "Both positions must be set and must be in area mode.");
 					} else
 						player.sendMessage(ChatColor.RED + "You aren't allowed to do this.");
-
 				} else if (args[0].equalsIgnoreCase("level")) {
 					if (session.mode == MeasuringMode.AREA && session.isPos1Set() && session.isPos2Set()) {
 						int level = 0;
@@ -183,10 +182,8 @@ public class MeasuringTape extends JavaPlugin
 
 	boolean hasPermission(Player player, String permission) {
 		if (permissions != null)
-			return permissions.permission(player, permission);
-		if (permission.equals("measuringtape.tp"))
-			return player.isOp();
-		return true;
+			return permissions.has(player, permission);
+		return player.hasPermission(permission);
 	}
 
 	void attach(Player player, Block block, Action action) {
