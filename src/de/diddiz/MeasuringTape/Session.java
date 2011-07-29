@@ -9,10 +9,8 @@ class Session
 	boolean MTEnabled;
 	final List<Location> pos = new ArrayList<Location>(2);
 	MeasuringMode mode;
-	long lastTape;
 
 	Session(boolean enabled) {
-		lastTape = 0;
 		mode = MeasuringMode.DISTANCE;
 		MTEnabled = enabled;
 		resetPos();

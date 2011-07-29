@@ -1,5 +1,6 @@
 package de.diddiz.MeasuringTape;
 
+import static de.diddiz.utils.BukkitUtils.giveTool;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,7 +29,6 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 public class MeasuringTape extends JavaPlugin
 {
 	private final HashMap<Integer, Session> sessions = new HashMap<Integer, Session>();
-	private int tapeDelay;
 	private int blocksPerString;
 	boolean useTargetBlock;
 	private boolean defaultEnabled;
@@ -44,8 +44,6 @@ public class MeasuringTape extends JavaPlugin
 			final Configuration config = getConfiguration();
 			config.load();
 			final List<String> keys = config.getKeys(null);
-			if (!keys.contains("tapeDelay"))
-				config.setProperty("tapeDelay", 15);
 			if (!keys.contains("blocksPerString"))
 				config.setProperty("blocksPerString", -1);
 			if (!keys.contains("useTargetBlock"))
@@ -56,7 +54,6 @@ public class MeasuringTape extends JavaPlugin
 				config.setProperty("groundBlocks", Arrays.asList(new Integer[]{1, 2, 3, 4, 12, 13}));
 			if (!config.save())
 				throw new IOException("Error while writing to config.yml");
-			tapeDelay = config.getInt("tapeDelay", 15);
 			blocksPerString = config.getInt("blocksPerString", -1);
 			defaultEnabled = config.getBoolean("defaultEnabled", true);
 			useTargetBlock = config.getBoolean("useTargetBlock", true);
@@ -89,28 +86,9 @@ public class MeasuringTape extends JavaPlugin
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "MeasuringTape v" + getDescription().getVersion() + " by DiddiZ");
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "Type /mt help for help");
 				} else if (args[0].equalsIgnoreCase("tape")) {
-					if (hasPermission(player, "measuringtape.tape")) {
-						if (player.getInventory().contains(287)) {
-							player.sendMessage(ChatColor.RED + "You have alredy a string");
-							player.sendMessage(ChatColor.LIGHT_PURPLE + "Left click: select pos #1; Right click select pos #2.");
-						} else {
-							final long mins = (System.currentTimeMillis() - session.lastTape) / 60000;
-							if (mins >= tapeDelay) {
-								final int free = player.getInventory().firstEmpty();
-								if (free >= 0) {
-									player.getInventory().setItem(free, player.getItemInHand());
-									player.setItemInHand(new ItemStack(287, 1));
-									session.lastTape = System.currentTimeMillis();
-									player.sendMessage(ChatColor.GREEN + "Here is your measuring tape.");
-									player.sendMessage(ChatColor.LIGHT_PURPLE + "Left click: select pos #1; Right click select pos #2.");
-								} else
-									player.sendMessage(ChatColor.RED + "You have no empty slot in your inventory");
-							} else {
-								player.sendMessage(ChatColor.RED + "You got your last tape " + mins + " minutes ago.");
-								player.sendMessage(ChatColor.RED + "You have to wait " + (tapeDelay - mins) + " minutes.");
-							}
-						}
-					} else
+					if (hasPermission(player, "measuringtape.tape"))
+						giveTool(player, 287);
+					else
 						player.sendMessage(ChatColor.RED + "You aren't allowed to do this.");
 				} else if (args[0].equalsIgnoreCase("read"))
 					if (session.isPos1Set() && session.isPos2Set())
@@ -151,17 +129,17 @@ public class MeasuringTape extends JavaPlugin
 						int level = 0;
 						final int lowerX = Math.min(session.pos.get(0).getBlockX(), session.pos.get(1).getBlockX());
 						final int upperX = Math.max(session.pos.get(0).getBlockX(), session.pos.get(1).getBlockX());
-						final int lowerY = Math.min(session.pos.get(0).getBlockY(), session.pos.get(1).getBlockY());
-						final int upperY = Math.max(session.pos.get(0).getBlockY(), session.pos.get(1).getBlockY());
+						final int lowerZ = Math.min(session.pos.get(0).getBlockZ(), session.pos.get(1).getBlockZ());
+						final int upperZ = Math.max(session.pos.get(0).getBlockZ(), session.pos.get(1).getBlockZ());
 						final World world = player.getWorld();
 						for (int x = lowerX; x <= upperX; x++)
-							for (int z = lowerY; z <= upperY; z++)
+							for (int z = lowerZ; z <= upperZ; z++)
 								for (int y = 127; y >= 0; y--)
 									if (groundBlocks.contains(world.getBlockTypeIdAt(x, y, z))) {
 										level += y;
 										break;
 									}
-						level = (int)((double)level / 256 + 0.5);
+						level = (int)((double)level / ((Math.abs(lowerX - upperX) + 1) * (Math.abs(lowerZ - upperZ) + 1)) + 0.5);
 						player.sendMessage("Optimal ground level is at " + level);
 					} else
 						player.sendMessage(ChatColor.RED + "Both positions must be set and must be in area mode.");
