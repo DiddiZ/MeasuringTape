@@ -65,8 +65,6 @@ public class MeasuringTape extends JavaPlugin
 		}
 		if (pm.getPlugin("Permissions") != null)
 			permissions = ((Permissions)pm.getPlugin("Permissions")).getHandler();
-		else
-			log.info("[MeasuringTape] Permissions plugin not found. Using default permissions.");
 		pm.registerEvent(Type.PLAYER_INTERACT, new MTPlayerListener(this), Priority.Normal, this);
 		log.info("MeasuringTape v" + getDescription().getVersion() + " by DiddiZ enabled");
 	}
