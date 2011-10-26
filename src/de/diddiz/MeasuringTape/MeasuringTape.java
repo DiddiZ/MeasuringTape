@@ -1,20 +1,21 @@
 package de.diddiz.MeasuringTape;
 
 import static de.diddiz.utils.BukkitUtils.giveTool;
-import java.io.IOException;
+import static org.bukkit.Bukkit.getLogger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
@@ -22,7 +23,6 @@ import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.config.Configuration;
 import com.nijiko.permissions.PermissionHandler;
 import com.nijikokun.bukkit.Permissions.Permissions;
 
@@ -34,44 +34,39 @@ public class MeasuringTape extends JavaPlugin
 	private boolean defaultEnabled;
 	private Set<Integer> groundBlocks;
 	private PermissionHandler permissions = null;
-	private Logger log;
 
 	@Override
 	public void onEnable() {
-		log = getServer().getLogger();
 		final PluginManager pm = getServer().getPluginManager();
 		try {
-			final Configuration config = getConfiguration();
-			config.load();
-			final List<String> keys = config.getKeys(null);
-			if (!keys.contains("blocksPerString"))
-				config.setProperty("blocksPerString", -1);
-			if (!keys.contains("useTargetBlock"))
-				config.setProperty("useTargetBlock", true);
-			if (!keys.contains("defaultEnabled"))
-				config.setProperty("defaultEnabled", true);
-			if (!keys.contains("groundBlocks"))
-				config.setProperty("groundBlocks", Arrays.asList(new Integer[]{1, 2, 3, 4, 12, 13}));
-			if (!config.save())
-				throw new IOException("Error while writing to config.yml");
-			blocksPerString = config.getInt("blocksPerString", -1);
-			defaultEnabled = config.getBoolean("defaultEnabled", true);
-			useTargetBlock = config.getBoolean("useTargetBlock", true);
-			groundBlocks = new HashSet<Integer>(config.getIntList("groundBlocks", null));
+			final ConfigurationSection cfg = getConfig();
+			if (!cfg.contains("blocksPerString"))
+				cfg.set("blocksPerString", -1);
+			if (!cfg.contains("useTargetBlock"))
+				cfg.set("useTargetBlock", true);
+			if (!cfg.contains("defaultEnabled"))
+				cfg.set("defaultEnabled", true);
+			if (!cfg.contains("groundBlocks"))
+				cfg.set("groundBlocks", Arrays.asList(new Integer[]{1, 2, 3, 4, 12, 13}));
+			saveConfig();
+			blocksPerString = cfg.getInt("blocksPerString", -1);
+			defaultEnabled = cfg.getBoolean("defaultEnabled", true);
+			useTargetBlock = cfg.getBoolean("useTargetBlock", true);
+			groundBlocks = new HashSet<Integer>(toIntList(cfg.getList("groundBlocks", null)));
 		} catch (final Exception ex) {
-			log.log(Level.SEVERE, "[MeasuringTape] Could not load config", ex);
+			getLogger().log(Level.SEVERE, "[MeasuringTape] Could not load config", ex);
 			pm.disablePlugin(this);
 			return;
 		}
 		if (pm.getPlugin("Permissions") != null)
 			permissions = ((Permissions)pm.getPlugin("Permissions")).getHandler();
 		pm.registerEvent(Type.PLAYER_INTERACT, new MTPlayerListener(this), Priority.Normal, this);
-		log.info("MeasuringTape v" + getDescription().getVersion() + " by DiddiZ enabled");
+		getLogger().info("MeasuringTape v" + getDescription().getVersion() + " by DiddiZ enabled");
 	}
 
 	@Override
 	public void onDisable() {
-		log.info("MeasuringTape disabled");
+		getLogger().info("MeasuringTape disabled");
 	}
 
 	@Override
@@ -280,5 +275,21 @@ public class MeasuringTape extends JavaPlugin
 
 	private static Location getDiff(Location loc1, Location loc2) {
 		return new Location(loc1.getWorld(), loc2.getBlockX() - loc1.getBlockX(), loc2.getBlockY() - loc1.getBlockY(), loc2.getBlockZ() - loc1.getBlockZ());
+	}
+
+	public static List<Integer> toIntList(List<?> list) {
+		if (list == null)
+			return new ArrayList<Integer>();
+		final List<Integer> ints = new ArrayList<Integer>(list.size());
+		for (final Object obj : list)
+			if (obj instanceof Integer)
+				ints.add((Integer)obj);
+			else
+				try {
+					ints.add(Integer.valueOf(String.valueOf(obj)));
+				} catch (final NumberFormatException ex) {
+					getLogger().warning("[LogBlock] Config error: '" + obj + "' is not a number");
+				}
+		return ints;
 	}
 }
