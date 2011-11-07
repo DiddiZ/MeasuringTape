@@ -25,6 +25,7 @@ class MTPlayerListener extends PlayerListener
 				mt.attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), action);
 			else if (action == Action.RIGHT_CLICK_AIR && mt.useTargetBlock)
 				mt.attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), action);
+			event.setCancelled(true);
 		}
 	}
 }
