@@ -14,7 +14,6 @@ class Session
 		Session session = sessions.get(player);
 		if (session == null) {
 			session = new Session();
-			System.out.println("new sesionm");
 			sessions.put(player, session);
 		}
 		return session;

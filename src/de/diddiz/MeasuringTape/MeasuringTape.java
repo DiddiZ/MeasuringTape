@@ -142,7 +142,6 @@ public class MeasuringTape extends JavaPlugin
 	}
 
 	void attach(Player player, Block block, Action action) {
-		System.out.println("attached");
 		final Session session = Session.getSession(player);
 		if (session.MTEnabled) {
 			final Location loc = new Location(block.getWorld(), block.getX(), block.getY(), block.getZ());
