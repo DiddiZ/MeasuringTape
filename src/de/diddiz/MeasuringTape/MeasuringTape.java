@@ -2,20 +2,12 @@ package de.diddiz.MeasuringTape;
 
 import static de.diddiz.utils.BukkitUtils.giveTool;
 import static org.bukkit.Bukkit.getLogger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
@@ -28,37 +20,13 @@ import com.nijikokun.bukkit.Permissions.Permissions;
 
 public class MeasuringTape extends JavaPlugin
 {
-	private final HashMap<Integer, Session> sessions = new HashMap<Integer, Session>();
-	private int blocksPerString;
-	boolean useTargetBlock;
-	private boolean defaultEnabled;
-	private Set<Integer> groundBlocks;
-	private PermissionHandler permissions = null;
+	private static PermissionHandler permissions = null;
 
 	@Override
 	public void onEnable() {
 		final PluginManager pm = getServer().getPluginManager();
-		try {
-			final ConfigurationSection cfg = getConfig();
-			if (!cfg.contains("blocksPerString"))
-				cfg.set("blocksPerString", -1);
-			if (!cfg.contains("useTargetBlock"))
-				cfg.set("useTargetBlock", true);
-			if (!cfg.contains("defaultEnabled"))
-				cfg.set("defaultEnabled", true);
-			if (!cfg.contains("groundBlocks"))
-				cfg.set("groundBlocks", Arrays.asList(new Integer[]{1, 2, 3, 4, 12, 13}));
-			saveConfig();
-			blocksPerString = cfg.getInt("blocksPerString", -1);
-			defaultEnabled = cfg.getBoolean("defaultEnabled", true);
-			useTargetBlock = cfg.getBoolean("useTargetBlock", true);
-			groundBlocks = new HashSet<Integer>(toIntList(cfg.getList("groundBlocks", null)));
-		} catch (final Exception ex) {
-			getLogger().log(Level.SEVERE, "[MeasuringTape] Could not load config", ex);
-			pm.disablePlugin(this);
-			return;
-		}
-		if (pm.getPlugin("Permissions") != null)
+		Config.load(this);
+		if (pm.isPluginEnabled("Permissions"))
 			permissions = ((Permissions)pm.getPlugin("Permissions")).getHandler();
 		pm.registerEvent(Type.PLAYER_INTERACT, new MTPlayerListener(this), Priority.Normal, this);
 		getLogger().info("MeasuringTape v" + getDescription().getVersion() + " by DiddiZ enabled");
@@ -74,7 +42,7 @@ public class MeasuringTape extends JavaPlugin
 		if (cmd.getName().equalsIgnoreCase("mt")) {
 			if (sender instanceof Player) {
 				final Player player = (Player)sender;
-				final Session session = getSession(player);
+				final Session session = Session.getSession(player);
 				if (args.length == 0) {
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "MeasuringTape v" + getDescription().getVersion() + " by DiddiZ");
 					player.sendMessage(ChatColor.LIGHT_PURPLE + "Type /mt help for help");
@@ -127,7 +95,7 @@ public class MeasuringTape extends JavaPlugin
 						for (int x = lowerX; x <= upperX; x++)
 							for (int z = lowerZ; z <= upperZ; z++)
 								for (int y = 127; y >= 0; y--)
-									if (groundBlocks.contains(world.getBlockTypeIdAt(x, y, z))) {
+									if (Config.groundBlocks.contains(world.getBlockTypeIdAt(x, y, z))) {
 										level += y;
 										break;
 									}
@@ -173,14 +141,9 @@ public class MeasuringTape extends JavaPlugin
 		return false;
 	}
 
-	boolean hasPermission(Player player, String permission) {
-		if (permissions != null)
-			return permissions.has(player, permission);
-		return player.hasPermission(permission);
-	}
-
 	void attach(Player player, Block block, Action action) {
-		final Session session = getSession(player);
+		System.out.println("attached");
+		final Session session = Session.getSession(player);
 		if (session.MTEnabled) {
 			final Location loc = new Location(block.getWorld(), block.getX(), block.getY(), block.getZ());
 			if (session.mode == MeasuringMode.DISTANCE || session.mode == MeasuringMode.VECTORS || session.mode == MeasuringMode.AREA || session.mode == MeasuringMode.BLOCKS || session.mode == MeasuringMode.VOLUME) {
@@ -216,22 +179,22 @@ public class MeasuringTape extends JavaPlugin
 		switch (session.mode) {
 			case DISTANCE:
 				distance = Math.round(Math.sqrt(x * x + y * y + z * z) * 10) / 10d;
-				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+				stringsNeeded = (int)Math.ceil(distance / Config.blocksPerString);
 				msg = "Distance: " + distance + "m";
 				break;
 			case VECTORS:
-				stringsNeeded = (int)Math.ceil((x + y + z) / blocksPerString);
+				stringsNeeded = (int)Math.ceil((x + y + z) / Config.blocksPerString);
 				msg = "Vectors: X" + x + " Y" + z + " Z" + y;
 				break;
 			case AREA:
 				x++;
 				z++;
-				stringsNeeded = (int)Math.ceil((x + z - 1) / blocksPerString);
+				stringsNeeded = (int)Math.ceil((x + z - 1) / Config.blocksPerString);
 				msg = "Area: " + x + "x" + z + " (" + x * z + " m2)";
 				break;
 			case BLOCKS:
 				x += y + z + 1;
-				stringsNeeded = (int)Math.ceil(x / blocksPerString);
+				stringsNeeded = (int)Math.ceil(x / Config.blocksPerString);
 				msg = "Blocks: " + x;
 				break;
 			case TRACK:
@@ -240,18 +203,18 @@ public class MeasuringTape extends JavaPlugin
 					distance += Math.sqrt(diff.getBlockX() * diff.getBlockX() + diff.getBlockY() * diff.getBlockY() + diff.getBlockZ() * diff.getBlockZ());
 				}
 				distance = Math.round(distance * 10) / 10d;
-				stringsNeeded = (int)Math.ceil(distance / blocksPerString);
+				stringsNeeded = (int)Math.ceil(distance / Config.blocksPerString);
 				msg = "Track: " + distance + "m";
 				break;
 			case VOLUME:
 				x++;
 				y++;
 				z++;
-				stringsNeeded = (int)Math.ceil((x + y + z - 2) / blocksPerString);
+				stringsNeeded = (int)Math.ceil((x + y + z - 2) / Config.blocksPerString);
 				msg = "Volume: " + x + "x" + y + "x" + z + " (" + x * y * z + " m3)";
 				break;
 		}
-		if (blocksPerString != -1) {
+		if (Config.blocksPerString != -1) {
 			int stringsAvailable = 0;
 			for (final ItemStack item : player.getInventory().getContents())
 				if (item != null && item.getTypeId() == 287)
@@ -264,32 +227,13 @@ public class MeasuringTape extends JavaPlugin
 		player.sendMessage(msg);
 	}
 
-	private Session getSession(Player player) {
-		Session session = sessions.get(player.getName().hashCode());
-		if (session == null) {
-			session = new Session(defaultEnabled);
-			sessions.put(player.getName().hashCode(), session);
-		}
-		return session;
-	}
-
 	private static Location getDiff(Location loc1, Location loc2) {
 		return new Location(loc1.getWorld(), loc2.getBlockX() - loc1.getBlockX(), loc2.getBlockY() - loc1.getBlockY(), loc2.getBlockZ() - loc1.getBlockZ());
 	}
 
-	public static List<Integer> toIntList(List<?> list) {
-		if (list == null)
-			return new ArrayList<Integer>();
-		final List<Integer> ints = new ArrayList<Integer>(list.size());
-		for (final Object obj : list)
-			if (obj instanceof Integer)
-				ints.add((Integer)obj);
-			else
-				try {
-					ints.add(Integer.valueOf(String.valueOf(obj)));
-				} catch (final NumberFormatException ex) {
-					getLogger().warning("[LogBlock] Config error: '" + obj + "' is not a number");
-				}
-		return ints;
+	static boolean hasPermission(Player player, String permission) {
+		if (permissions != null)
+			return permissions.has(player, permission);
+		return player.hasPermission(permission);
 	}
 }

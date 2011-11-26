@@ -15,15 +15,15 @@ class MTPlayerListener extends PlayerListener
 
 	@Override
 	public void onPlayerInteract(PlayerInteractEvent event) {
-		if (event.getMaterial() == Material.STRING && mt.hasPermission(event.getPlayer(), "measuringtape.measure")) {
+		if (event.getMaterial() == Material.STRING && MeasuringTape.hasPermission(event.getPlayer(), "measuringtape.measure")) {
 			final Action action = event.getAction();
 			if (action == Action.LEFT_CLICK_BLOCK)
 				mt.attach(event.getPlayer(), event.getClickedBlock(), action);
 			else if (action == Action.RIGHT_CLICK_BLOCK)
 				mt.attach(event.getPlayer(), event.getClickedBlock(), action);
-			else if (action == Action.LEFT_CLICK_AIR && mt.useTargetBlock)
+			else if (action == Action.LEFT_CLICK_AIR && Config.useTargetBlock)
 				mt.attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), action);
-			else if (action == Action.RIGHT_CLICK_AIR && mt.useTargetBlock)
+			else if (action == Action.RIGHT_CLICK_AIR && Config.useTargetBlock)
 				mt.attach(event.getPlayer(), event.getPlayer().getTargetBlock(null, Integer.MAX_VALUE), action);
 			event.setCancelled(true);
 		}

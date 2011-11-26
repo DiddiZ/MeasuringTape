@@ -1,18 +1,32 @@
 package de.diddiz.MeasuringTape;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
 class Session
 {
+	private static final HashMap<Player, Session> sessions = new HashMap<Player, Session>();
+
+	public static Session getSession(Player player) {
+		Session session = sessions.get(player);
+		if (session == null) {
+			session = new Session();
+			System.out.println("new sesionm");
+			sessions.put(player, session);
+		}
+		return session;
+	}
+
 	boolean MTEnabled;
 	final List<Location> pos = new ArrayList<Location>(2);
 	MeasuringMode mode;
 
-	Session(boolean enabled) {
+	Session() {
 		mode = MeasuringMode.DISTANCE;
-		MTEnabled = enabled;
+		MTEnabled = Config.defaultEnabled;
 		resetPos();
 	}
 
