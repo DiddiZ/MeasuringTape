@@ -1,7 +1,6 @@
 package de.diddiz.MeasuringTape;
 
 import static de.diddiz.utils.BukkitUtils.giveTool;
-import static org.bukkit.Bukkit.getLogger;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -9,8 +8,6 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Priority;
-import org.bukkit.event.Event.Type;
 import org.bukkit.event.block.Action;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.PluginManager;
@@ -28,7 +25,7 @@ public class MeasuringTape extends JavaPlugin
 		Config.load(this);
 		if (pm.isPluginEnabled("Permissions"))
 			permissions = ((Permissions)pm.getPlugin("Permissions")).getHandler();
-		pm.registerEvent(Type.PLAYER_INTERACT, new MTPlayerListener(this), Priority.Normal, this);
+		pm.registerEvents(new MTPlayerListener(), this);
 		getLogger().info("MeasuringTape v" + getDescription().getVersion() + " by DiddiZ enabled");
 	}
 
@@ -141,7 +138,7 @@ public class MeasuringTape extends JavaPlugin
 		return false;
 	}
 
-	void attach(Player player, Block block, Action action) {
+	static void attach(Player player, Block block, Action action) {
 		final Session session = Session.getSession(player);
 		if (session.MTEnabled) {
 			final Location loc = new Location(block.getWorld(), block.getX(), block.getY(), block.getZ());
@@ -169,7 +166,7 @@ public class MeasuringTape extends JavaPlugin
 		}
 	}
 
-	private void showDistance(Player player, Session session) {
+	private static void showDistance(Player player, Session session) {
 		Location diff = getDiff(session.pos.get(0), session.pos.get(1));
 		int x = Math.abs(diff.getBlockX()), y = Math.abs(diff.getBlockY()), z = Math.abs(diff.getBlockZ());
 		double distance = 0;
