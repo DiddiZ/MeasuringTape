@@ -10,7 +10,7 @@ class MTPlayerListener implements Listener
 {
 	@EventHandler
 	public static void onPlayerInteract(PlayerInteractEvent event) {
-		if (event.getMaterial() == Material.STRING && MeasuringTape.hasPermission(event.getPlayer(), "measuringtape.measure")) {
+		if (event.getMaterial() == Material.STICK && MeasuringTape.hasPermission(event.getPlayer(), "measuringtape.measure")) {
 			final Action action = event.getAction();
 			if (action == Action.LEFT_CLICK_BLOCK)
 				MeasuringTape.attach(event.getPlayer(), event.getClickedBlock(), action);
